@@ -12,7 +12,8 @@
     "db:migrate": "tsx db/migrate.ts",
     "test:ingest": "tsx test-ingest.ts",
     "test:intelligence": "tsx test-intelligence.ts",
-    "test:portal": "tsx test-portal.ts"
+    "test:portal": "tsx test-portal.ts",
+    "test:mailer": "tsx test-mailer.ts"
   },
   "keywords": [
     "lead-qualification",

@@ -195,10 +195,22 @@ function renderVerification() {
   const card = panel("Confirmação pendente", available
     ? "Envie um link de uso único para " + workspaces.account.email + ". O link expira em 30 minutos."
     : "O envio de e-mail ainda não está configurado neste ambiente. Seu cadastro e a recuperação por código continuam disponíveis.");
-  if (available) card.append(actions(button("Enviar confirmação", () => run(async () => {
-    await request("/auth/verification/request", "POST", {});
-    message(statusLine, "Solicitação recebida. Confira sua caixa de entrada.");
-  }), "primary")));
+  if (available) {
+    const send = button("Enviar confirmação", async () => {
+      send.disabled = true;
+      try {
+        await run(async () => {
+          const result = await request("/auth/verification/request", "POST", {});
+          if (!result) return loadWorkspaces();
+          send.textContent = "Reenviar confirmação";
+          message(statusLine, "E-mail enviado para entrega. Confira sua caixa de entrada e o spam.");
+        });
+      } finally {
+        send.disabled = false;
+      }
+    }, "primary");
+    card.append(actions(send));
+  }
   const demo = node("a", "Abrir demonstração pública", "button secondary");
   demo.href = "/intelligence/";
   card.append(actions(demo));
@@ -258,7 +270,7 @@ function renderAccess(mode, resetToken) {
     if (mode !== "login") links.push(button("Entrar", () => renderAccess("login")));
     if (mode !== "register" && !invite) links.push(button("Cadastrar agência", () => renderAccess("register")));
     if (mode !== "recovery") links.push(button("Recuperar acesso", () => renderAccess("recovery")));
-    if (mode === "recovery") links.push(button("Recuperar por e-mail", () => renderAccess("emailRecovery")));
+    if (mode === "recovery" || mode === "reset") links.push(button(mode === "reset" ? "Solicitar novo link" : "Recuperar por e-mail", () => renderAccess("emailRecovery")));
     if (invite && mode !== "invite") links.push(button("Voltar ao convite", () => renderAccess("invite")));
     card.append(actions(...links));
   }
@@ -317,19 +329,26 @@ async function renderAgency(id, editing) {
   }));
   if (editing) editor.append(actions(button("Cancelar edição", () => run(() => renderAgency(id)))));
 
-  const invites = panel("Convidar usuário", "Copie o link de uso único e compartilhe-o pelo canal de sua preferência. Ele vence em 48 horas.");
+  const invites = panel("Convidar usuário", "Envie por e-mail, quando disponível, ou copie o link de uso único. Ele vence em 48 horas.");
   invites.classList.add("stack");
   const permissions = [["EDITOR", "Cliente · pode mover e registrar resultados"], ["VIEWER", "Cliente · somente leitura"]];
   if (agency.role === "OWNER") permissions.push(["ADMIN", "Administrador da agência"]);
+  const deliveryChoice = field("sendEmail", " Enviar ao endereço convidado", { type: "checkbox", required: false });
+  if (workspaces.mailAvailable) deliveryChoice.classList.add("mail-choice");
   const invitation = form([
     email(), field("role", "Permissão", { choices: permissions }),
     field("clientId", "Empresa cliente", { required: false, choices: [["", "Selecione"], ...agency.clients.map((client) => [client.id, client.name])] }),
+    ...(workspaces.mailAvailable ? [deliveryChoice] : []),
   ], "Gerar convite", async (data) => {
     if (data.role === "ADMIN" || !data.clientId) delete data.clientId;
-    const { token } = await request(agencyPath(id) + "/invites", "POST", data);
+    data.sendEmail = data.sendEmail === "on";
+    const { token, emailDelivery } = await request(agencyPath(id) + "/invites", "POST", data);
     const url = new URL("/intelligence/portal/", location.origin);
     url.hash = "invite=" + token;
-    showSecret("Link de convite", "Envie o link somente à pessoa convidada. O portal não envia e-mail.", url.href, () => run(() => renderAgency(id)));
+    const description = emailDelivery === "accepted" ? "E-mail encaminhado para entrega. O link também está disponível para cópia."
+      : emailDelivery === "failed" || emailDelivery === "unavailable" ? "O e-mail não pôde ser encaminhado. Compartilhe o link privadamente."
+      : "Compartilhe o link somente com a pessoa convidada.";
+    showSecret("Link de convite", description, url.href, () => run(() => renderAgency(id)));
   });
   const permission = invitation.elements.namedItem("role");
   const company = invitation.elements.namedItem("clientId");

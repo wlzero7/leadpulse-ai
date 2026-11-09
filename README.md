@@ -2,19 +2,25 @@
 
 ## Portal privado do LeadPulse Intelligence
 
-Abra `/intelligence/portal/`, selecione **Cadastrar agência** e guarde o código de recuperação exibido uma única vez. O portal usa Argon2id e sessões de 12 horas no servidor. Em **Recuperar acesso**, informe seu e-mail e o código salvo para receber um token de 15 minutos. A troca de senha revoga as sessões anteriores e fornece um novo código. Sem o código salvo, esta versão não recupera a conta por e-mail.
+Abra `/intelligence/portal/`, selecione **Cadastrar agência** e guarde o código de recuperação exibido uma única vez. O portal usa Argon2id e sessões de 12 horas no servidor. Em **Recuperar acesso**, informe seu e-mail e o código salvo para receber um token de 15 minutos. A troca de senha revoga as sessões anteriores e fornece um novo código. Se o endereço estiver confirmado e o envio estiver habilitado, também é possível recuperar por e-mail.
 
-No Overview da agência, cadastre empresas, abra seus pipelines e gere convites. Compartilhe o link de uso único de forma privada. O convite dura 48 horas e uma conta já existente deve entrar com o e-mail indicado no convite. Cliente editor pode mover oportunidades e registrar resultados. Cliente leitor apenas consulta. Titulares podem convidar administradores. Os convites são compartilhados manualmente e o cadastro aberto não verifica a caixa de e-mail.
+No Overview da agência, cadastre empresas, abra seus pipelines e gere convites. Compartilhe o link de uso único de forma privada. O convite dura 48 horas e uma conta já existente deve entrar com o e-mail indicado no convite. Cliente editor pode mover oportunidades e registrar resultados. Cliente leitor apenas consulta. Titulares podem convidar administradores. Use o envio opcional ou compartilhe o link manualmente.
 
 No Overview da agência, abra **Administrar acessos** para consultar vínculos, convites e auditoria. O titular pode administrar outros titulares e administradores, e a agência sempre mantém pelo menos um titular. Os administradores gerenciam vínculos de cliente. Mudanças de papel, remoção e encerramento invalidam sessões anteriores no escopo afetado, sem desconectar workspaces independentes. Convites pendentes para um vínculo removido são revogados. Convites expirados permanecem visíveis por 30 dias.
 
-Contas existentes e novas precisam confirmar o endereço antes de abrir dados empresariais. O servidor padrão não possui provedor de e-mail. A composição `createApp(mailer)` recebe um adaptador `PortalMailer`; o teste usa um simulador em memória. O adaptador deve entregar links de confirmação `/intelligence/portal/#verify=TOKEN` ou recuperação `/intelligence/portal/#reset=TOKEN` ao destinatário, sem registrar o token ou a URL. A recuperação por código continua disponível. A opção por e-mail só emite token para endereços confirmados quando há adaptador. O provedor simulado não é habilitado no Render.
+Contas existentes e novas precisam confirmar o endereço antes de abrir dados empresariais. O servidor integra o Resend pela API de envio, usando as variáveis privadas do ambiente. Para habilitar:
+
+1. Em uma conta Resend autorizada, verifique um domínio de envio próprio via DNS (SPF/DKIM) e mantenha o rastreamento de cliques e aberturas desativado nesse domínio.
+2. Gere uma chave **Sending access** restrita ao domínio. No serviço Render existente, configure `RESEND_API_KEY`, `MAIL_FROM` (endereço do domínio verificado, sem nome de exibição) e `PUBLIC_APP_URL` (origem HTTPS pública do portal, sem caminho). Salve e faça o redeploy. Configuração ausente ou inválida mantém a entrega desativada.
+3. Com uma caixa controlada, cadastre uma agência, clique em **Enviar confirmação**, abra o link e entre na mesma conta. Depois teste **Recuperar acesso → Recuperar por e-mail** e confirme que a senha anterior e as sessões antigas deixaram de funcionar.
+
+O Resend recebe o conteúdo da mensagem para entregar o link. Restrinja o acesso aos registros do provedor. No LeadPulse, os links usam fragmentos, sem rastreamento, e os tokens são armazenados como hashes. A confirmação vale 30 minutos e a recuperação, 15 minutos. Um reenvio de confirmação bem-sucedido substitui o link anterior. Uma falha conhecida de reenvio preserva o último link válido. Recuperação por código continua disponível. Convites por e-mail são opcionais e o link manual permanece disponível.
 
 A auditoria é acessível a titulares e administradores da própria agência e armazena eventos com identificadores, escopo e horário. Ela omite credenciais, tokens e conteúdo comercial. Configure `PORTAL_AUDIT_RETENTION_DAYS` (padrão 180, intervalo de 30 a 3650). A interface apresenta os 100 eventos recentes.
 
 As novas tabelas `portal_*` são adicionadas sem importar os dados da API por chaves ou da demo. O portal cadastra novas oportunidades com análise heurística. A demonstração Atlas Mídia permanece em `/intelligence/`. Seus registros expiram em sete dias, com limpeza na inicialização e a cada hora enquanto o servidor estiver ativo. Há limites de taxa e de registros por sessão.
 
-Para validar a sprint, execute `pnpm run build`, `pnpm run test:ingest`, `pnpm run test:intelligence` e `pnpm run test:portal`.
+Para validar a sprint, execute `pnpm run build`, `pnpm run test:ingest`, `pnpm run test:intelligence`, `pnpm run test:portal` e `pnpm run test:mailer`.
 
 ## Demonstração comercial do LeadPulse Intelligence
 

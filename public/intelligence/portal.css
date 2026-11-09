@@ -42,3 +42,6 @@
 .portal .governance-controls form { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 7px; }
 .portal .governance-controls .field { max-width: 100%; }
 .portal .governance-controls .button { min-height: 36px; }
+
+.portal .mail-choice { display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; }
+.portal .mail-choice input { width: auto; margin: 0 6px 0 0; }

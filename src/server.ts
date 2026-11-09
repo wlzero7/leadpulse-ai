@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createResendMailer } from "./services/resend-mailer.js";
+import type { PortalMailer } from "./services/portal-mail.js";
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { maintainPortal } from "./middlewares/portal-security.js";
@@ -40,7 +42,13 @@ async function bootstrap() {
     maintainPortal();
 
     // 2. Inicializa o aplicativo Express
-    const app = createApp();
+    let mailer: PortalMailer | undefined;
+    try {
+      mailer = createResendMailer(env);
+    } catch {
+      console.warn("[Portal] E-mail transacional desativado por configuração inválida.");
+    }
+    const app = createApp(mailer);
 
     // 3. Inicia o servidor HTTP
     const server = app.listen(env.PORT, "0.0.0.0", () => {

@@ -4,13 +4,14 @@ import { z } from "zod";
 import { db } from "../config/database.js";
 import { browserRequests, digest, limit, portalWrite, secret } from "../middlewares/portal-security.js";
 import { evaluateHeuristically } from "../services/ai.service.js";
+import type { PortalMailer } from "../services/portal-mail.js";
 import { audit } from "../services/portal-audit.js";
 import { agencyAccess, clientAccess, param } from "./portal-access.js";
 import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors.js";
 import { body, emailInput, handle, personInput, requireAccount } from "./portal-auth.routes.js";
 
 const clientInput = z.object({ name: personInput, segment: z.string().trim().max(120).default("") });
-const inviteInput = z.object({ email: emailInput, role: z.enum(["ADMIN", "EDITOR", "VIEWER"]), clientId: z.uuid().optional() });
+const inviteInput = z.object({ email: emailInput, role: z.enum(["ADMIN", "EDITOR", "VIEWER"]), clientId: z.uuid().optional(), sendEmail: z.boolean().optional() });
 const stage = z.enum(["NEW", "CONTACTED", "PROPOSAL", "WON", "LOST"]);
 const opportunityInput = z.object({
   name: personInput,
@@ -108,7 +109,21 @@ portalRoutes.post("/agencies/:agencyId/invites", handle(async (req, res) => {
     await tx.execute({ sql: "INSERT INTO portal_invite_ids (id, token_hash) VALUES (?, ?)", args: [id, hash] });
     await audit(tx, "invite.issued", current.accountId, current.agencyId, input.clientId ?? null, id, input.role);
   });
-  res.status(201).json({ token: value, expiresAt });
+  let emailDelivery: "accepted" | "unavailable" | "failed" | undefined;
+  if (input.sendEmail) {
+    const mailer = req.app.locals.portalMailer as PortalMailer | undefined;
+    emailDelivery = "unavailable";
+    if (mailer) {
+      try {
+        await mailer.send({ to: input.email, kind: "invite", token: value, expiresAt });
+        emailDelivery = "accepted";
+      } catch {
+        emailDelivery = "failed";
+        console.warn("[Portal] Falha de entrega de convite.");
+      }
+    }
+  }
+  res.status(201).json({ token: value, expiresAt, emailDelivery });
 }));
 
 const clientPath = "/agencies/:agencyId/clients/:clientId";

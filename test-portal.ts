@@ -60,7 +60,11 @@ assert.equal((await db.execute("SELECT id FROM portal_audit WHERE id = 'old-audi
 console.log("PASS additive migration, old invite IDs and audit/demo retention");
 
 const mailbox: import("./src/services/portal-mail.js").PortalMail[] = [];
-const server = createApp({ async send(mail) { mailbox.push(mail); } }).listen(0, "127.0.0.1");
+let failDelivery: "verify" | "reset" | "invite" | undefined;
+const server = createApp({ async send(mail) {
+  if (mail.kind === failDelivery) throw new Error("Provider rejected synthetic request");
+  mailbox.push(mail);
+} }).listen(0, "127.0.0.1");
 await once(server, "listening");
 const base = "http://127.0.0.1:" + (server.address() as AddressInfo).port;
 const prefix = "/api/v1/portal";
@@ -74,7 +78,7 @@ async function request(path: string, expected: number, options: { method?: strin
     method,
     headers: { ...(cookie ? { Cookie: cookie } : {}), ...(data !== undefined ? { "Content-Type": "application/json" } : {}), ...headers },
     body: data === undefined ? undefined : JSON.stringify(data),
-    signal: AbortSignal.timeout(5000),
+    signal: AbortSignal.timeout(12000),
   });
   assert.equal(response.status, expected, method + " " + path);
   return response;
@@ -105,6 +109,15 @@ async function verify(cookie: string, email: string, exerciseExpiry = false) {
     await db.execute({ sql: "UPDATE portal_email_verifications SET expires_at = 0 WHERE token_hash = ?", args: [hash(token)] });
     await confirm(token, 400);
     token = await issue();
+    failDelivery = "verify";
+    try {
+      for (let n = 0; n < 2; n++) {
+        await request("/auth/verification/request", 503, { cookie, method: "POST", data: {} });
+      }
+    } finally {
+      failDelivery = undefined;
+    }
+    await request("/auth/verification/request", 429, { cookie, method: "POST", data: {} });
   }
   await confirm(token, 204);
   await confirm(token, 400);
@@ -174,7 +187,19 @@ try {
   console.log("PASS agency registration, password storage, client editing, CSRF and cross-agency isolation");
 
   const editorInvite = await invite(owner, "editor@example.test", "EDITOR", a.id);
-  const viewerInvite = await invite(owner, "viewer@example.test", "VIEWER", a.id);
+  const emailed = await (await request(owner.agencyPath + "/invites", 201, {
+    cookie: owner.cookie, method: "POST", data: { email: "viewer@example.test", role: "VIEWER", clientId: a.id, sendEmail: true },
+  })).json();
+  assert.equal(emailed.emailDelivery, "accepted");
+  assert.ok(mailbox.at(-1)?.kind === "invite" && mailbox.at(-1)?.token === emailed.token);
+  const viewerInvite = emailed;
+  failDelivery = "invite";
+  const fallback = await (await request(owner.agencyPath + "/invites", 201, {
+    cookie: owner.cookie, method: "POST", data: { email: "fallback@example.test", role: "VIEWER", clientId: a.id, sendEmail: true },
+  })).json();
+  failDelivery = undefined;
+  assert.equal(fallback.emailDelivery, "failed");
+  assert.ok((await db.execute({ sql: "SELECT 1 FROM portal_invites WHERE token_hash = ?", args: [hash(fallback.token)] })).rows.length === 1);
   const expiredInvite = await invite(owner, "expired@example.test", "VIEWER", a.id);
   assert.ok((await db.execute({ sql: "SELECT token_hash FROM portal_invites WHERE token_hash = ?", args: [hash(editorInvite.token)] })).rows.length === 1);
   await db.execute({ sql: "UPDATE portal_invites SET expires_at = 0 WHERE token_hash = ?", args: [hash(expiredInvite.token)] });
@@ -269,12 +294,19 @@ try {
   await db.execute({ sql: "UPDATE portal_resets SET expires_at = 0 WHERE token_hash = ?", args: [hash(oldToken)] });
   await request("/auth/reset", 400, { method: "POST", data: { token: oldToken, password: changed } });
   const superseded = (await (await recover()).json()).resetToken;
+  failDelivery = "reset";
+  const failed = await request("/auth/recovery/email", 202, { method: "POST", data: { email: "owner-a@example.test" } });
+  const failedBody = await failed.json();
+  failDelivery = undefined;
+  assert.equal((await db.execute({ sql: "SELECT 1 FROM portal_resets WHERE account_id = ?", args: [owner.accountId] })).rows.length, 0);
   const beforeMail = mailbox.length;
   const unknown = await request("/auth/recovery/email", 202, { method: "POST", data: { email: "missing@example.test" } });
+  const unknownBody = await unknown.json();
   assert.equal(mailbox.length, beforeMail);
   const known = await request("/auth/recovery/email", 202, { method: "POST", data: { email: "owner-a@example.test" } });
-  assert.deepEqual(await known.json(), await unknown.json());
-  for (let i = 0; i < 25 && mailbox.length === beforeMail; i++) await delay(10);
+  const neutral = await known.json();
+  assert.deepEqual(neutral, unknownBody);
+  assert.deepEqual(neutral, failedBody);
   const recoveryMail = mailbox.at(-1);
   assert.ok(recoveryMail && recoveryMail.kind === "reset" && recoveryMail.to === "owner-a@example.test");
   await request("/auth/reset", 400, { method: "POST", data: { token: superseded, password: changed } });

@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../config/database.js";
@@ -19,17 +20,33 @@ emailRoutes.post("/verification/request", limitByAddress("verify-ip", 20, 3600),
   const token = secret();
   const hash = digest(token);
   const expiresAt = Date.now() + 30 * 60 * 1000;
-  await db.execute({
-    sql: `INSERT INTO portal_email_verifications (account_id, email, token_hash, expires_at)
-      VALUES (?, ?, ?, ?) ON CONFLICT (account_id) DO UPDATE SET email = excluded.email,
-        token_hash = excluded.token_hash, expires_at = excluded.expires_at`,
-    args: [account.id, account.email, hash, expiresAt],
+  const previous = await portalWrite(async (tx) => {
+    const { rows } = await tx.execute({
+      sql: "SELECT email, token_hash, expires_at FROM portal_email_verifications WHERE account_id = ? AND expires_at > ?",
+      args: [account.id, Date.now()],
+    });
+    await tx.execute({
+      sql: `INSERT INTO portal_email_verifications (account_id, email, token_hash, expires_at)
+        VALUES (?, ?, ?, ?) ON CONFLICT (account_id) DO UPDATE SET email = excluded.email,
+          token_hash = excluded.token_hash, expires_at = excluded.expires_at`,
+      args: [account.id, account.email, hash, expiresAt],
+    });
+    return rows[0];
   });
   try {
     await mailer.send({ to: account.email, kind: "verify", token, expiresAt });
   } catch {
-    await db.execute({ sql: "DELETE FROM portal_email_verifications WHERE token_hash = ?", args: [hash] });
-    throw new AppError("Não foi possível enviar a confirmação agora.", 503);
+    // A failure must not erase a newer request or invalidate the last delivered link.
+    if (previous?.email === account.email && Number(previous.expires_at) > Date.now()) {
+      await db.execute({
+        sql: "UPDATE portal_email_verifications SET token_hash = ?, expires_at = ? WHERE token_hash = ?",
+        args: [previous.token_hash, previous.expires_at, hash],
+      });
+    } else {
+      await db.execute({ sql: "DELETE FROM portal_email_verifications WHERE token_hash = ?", args: [hash] });
+    }
+    console.warn("[Portal] Falha de entrega de confirmação.");
+    throw new AppError("Não foi possível enviar a confirmação agora. Tente reenviar em instantes.", 503);
   }
   res.status(202).json({ accepted: true });
 }));
@@ -61,27 +78,35 @@ emailRoutes.post("/recovery/email", limitByAddress("recovery-email-ip", 20, 3600
   const token = secret();
   const hash = digest(token);
   const expiresAt = Date.now() + 15 * 60 * 1000;
-  void portalWrite(async (tx) => {
-    const { rows } = await tx.execute({
-      sql: `SELECT a.id, a.recovery_hash FROM portal_accounts a JOIN portal_verified_emails v
-        ON v.account_id = a.id AND v.email = a.email WHERE a.email = ?`, args: [email],
+  // Keep the public response uniform. The production transport is capped at 3.5 seconds.
+  const responseFloor = delay(5000);
+  try {
+    const issued = await portalWrite(async (tx) => {
+      const { rows } = await tx.execute({
+        sql: `SELECT a.id, a.recovery_hash FROM portal_accounts a JOIN portal_verified_emails v
+          ON v.account_id = a.id AND v.email = a.email WHERE a.email = ?`, args: [email],
+      });
+      const account = rows[0];
+      if (!account) return false;
+      await tx.batch([
+        { sql: "DELETE FROM portal_resets WHERE account_id = ?", args: [account.id] },
+        { sql: "INSERT INTO portal_resets (token_hash, account_id, recovery_hash, expires_at) VALUES (?, ?, ?, ?)",
+          args: [hash, account.id, account.recovery_hash, expiresAt] },
+      ]);
+      return true;
     });
-    const account = rows[0];
-    if (!account) return false;
-    await tx.batch([
-      { sql: "DELETE FROM portal_resets WHERE account_id = ?", args: [account.id] },
-      { sql: "INSERT INTO portal_resets (token_hash, account_id, recovery_hash, expires_at) VALUES (?, ?, ?, ?)",
-        args: [hash, account.id, account.recovery_hash, expiresAt] },
-    ]);
-    return true;
-  }).then(async (issued) => {
-    if (!issued) return;
-    try {
-      await mailer.send({ to: email, kind: "reset", token, expiresAt });
-    } catch {
-      await db.execute({ sql: "DELETE FROM portal_resets WHERE token_hash = ?", args: [hash] });
+    if (issued) {
+      try {
+        await mailer.send({ to: email, kind: "reset", token, expiresAt });
+      } catch {
+        await db.execute({ sql: "DELETE FROM portal_resets WHERE token_hash = ?", args: [hash] });
+        console.warn("[Portal] Falha de entrega de recuperação.");
+      }
     }
-  }).catch(() => console.warn("[Portal] Solicitação de recuperação adiada."));
-  // Neither the database lookup nor the delivery delays the public response.
+  } catch {
+    console.warn("[Portal] Falha ao processar recuperação por e-mail.");
+  } finally {
+    await responseFloor;
+  }
   res.status(202).json({ available: true });
 }));

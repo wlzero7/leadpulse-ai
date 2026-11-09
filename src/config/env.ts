@@ -18,6 +18,9 @@ const envSchema = z.object({
   GEMINI_MODEL: z.string().trim().min(1).default("gemini-3.1-flash-lite"),
   GEMINI_API_KEY: z.string().optional().default("mock_or_env"),
   OPENAI_API_KEY: z.string().optional().default(""),
+  RESEND_API_KEY: z.string().trim().optional(),
+  MAIL_FROM: z.string().trim().optional(),
+  PUBLIC_APP_URL: z.string().trim().optional(),
   PORTAL_AUDIT_RETENTION_DAYS: z.coerce.number().int().min(30).max(3650).default(180),
   CORS_ORIGIN: z.string().default("*"),
 });

@@ -1,6 +1,6 @@
 export interface PortalMail {
   to: string;
-  kind: "verify" | "reset";
+  kind: "verify" | "reset" | "invite";
   token: string;
   expiresAt: number;
 }
