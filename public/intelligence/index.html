@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Experimente a qualificação e o pipeline comercial em um workspace fictício.">
+  <title>LeadPulse Intelligence | Demonstração comercial</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/intelligence/style.css">
+  <script src="/intelligence/app.js" defer></script>
+</head>
+<body>
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="icon-pulse" viewBox="0 0 24 24"><path d="M2 12h5l3-7 4 14 3-7h5"/></symbol>
+    <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="icon-client" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l9-4v18m0-11h5v11M8 10h3m-3 4h3"/></symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2z"/></symbol>
+    <symbol id="icon-board" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m6-16v16M5 9h2m4 0h2m4 0h2"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="icon-file" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7zM14 3v5h4M10 12h5m-5 4h5"/></symbol>
+  </svg>
+  <a class="skip" href="#main">Ir para o conteúdo</a>
+  <aside class="sidebar" aria-label="Navegação do workspace">
+    <a class="brand" href="#overview">
+      <span class="brand-icon"><svg aria-hidden="true"><use href="#icon-pulse"/></svg></span>
+      <span>LeadPulse <strong>Intelligence</strong></span>
+    </a>
+    <div class="agency"><span class="initials">AM</span><div><strong>Atlas Mídia</strong><span>Agência fictícia</span></div></div>
+    <nav aria-label="Seções">
+      <span class="nav-caption">WORKSPACE</span>
+      <a href="#overview" data-nav="overview" aria-current="page"><svg aria-hidden="true"><use href="#icon-grid"/></svg>Overview</a>
+      <a href="#client" data-nav="client"><svg aria-hidden="true"><use href="#icon-client"/></svg>Client Workspace</a>
+      <a href="#intelligence" data-nav="intelligence"><svg aria-hidden="true"><use href="#icon-spark"/></svg>Lead Intelligence</a>
+      <a href="#pipeline" data-nav="pipeline"><svg aria-hidden="true"><use href="#icon-board"/></svg>Smart Pipeline</a>
+    </nav>
+    <div class="sidebar-footer"><span><i class="dot"></i> Sessão de demonstração</span><a href="/">← Site LeadPulse AI</a></div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <header class="topbar">
+      <div class="breadcrumb">Atlas Mídia <span aria-hidden="true">/</span> <strong>Nexo Solar</strong></div>
+      <div class="top-actions"><span class="badge demo-badge"><i class="dot"></i> Ambiente fictício</span><button class="button primary" id="new-lead" disabled><svg aria-hidden="true"><use href="#icon-plus"/></svg>Novo lead</button></div>
+    </header>
+    <div class="content">
+      <div id="load-state" class="load-state" role="status">Carregando seu workspace…</div>
+      <div id="load-error" class="load-error" hidden><span id="load-message" role="alert"></span><button id="reload" class="button secondary">Tentar novamente</button></div>
+      <noscript><p class="load-error">Ative o JavaScript para usar a demonstração interativa.</p></noscript>
+      <div id="workspace" aria-busy="true" hidden>
+        <section data-view="overview" aria-labelledby="overview-title">
+          <div class="heading"><p class="eyebrow">WORKSPACE DA AGÊNCIA</p><h1 id="overview-title" tabindex="-1">Overview</h1><p>Acompanhe a entrada de leads e o avanço comercial da Nexo Solar.</p></div>
+          <div class="hero">
+            <div><span class="hero-label"><svg aria-hidden="true"><use href="#icon-pulse"/></svg> DEMONSTRAÇÃO COMERCIAL</span><h2>Da entrada do lead à oportunidade.</h2><p>Cadastre um lead fictício, entenda os sinais por trás da pontuação e acompanhe a negociação em um só lugar.</p><button class="button hero-button" id="start-demo">Cadastrar lead <svg aria-hidden="true"><use href="#icon-arrow"/></svg></button></div>
+            <div class="hero-steps" aria-label="Etapas da jornada"><span><b>01</b> Entrada do lead</span><span><b>02</b> Análise explicável</span><span><b>03</b> Gestão da oportunidade</span></div>
+          </div>
+          <div class="kpis" aria-label="Indicadores do workspace">
+            <article class="kpi"><span class="metric-icon blue"><svg aria-hidden="true"><use href="#icon-grid"/></svg></span><div><p>Leads cadastrados</p><strong id="kpi-total">0</strong></div></article>
+            <article class="kpi"><span class="metric-icon purple"><svg aria-hidden="true"><use href="#icon-target"/></svg></span><div><p>Score médio</p><strong id="kpi-score">—</strong></div></article>
+            <article class="kpi"><span class="metric-icon amber"><svg aria-hidden="true"><use href="#icon-file"/></svg></span><div><p>Em proposta</p><strong id="kpi-proposal">0</strong></div></article>
+            <article class="kpi"><span class="metric-icon green"><svg aria-hidden="true"><use href="#icon-check"/></svg></span><div><p>Ganhos</p><strong id="kpi-won">0</strong></div></article>
+          </div>
+          <div class="two-col overview-grid">
+            <article class="panel"><header class="panel-header"><div><h2>Leads recentes</h2><p>Abra uma análise para ver os critérios da nota.</p></div><a class="text-link" href="#intelligence">Lead Intelligence →</a></header><ul id="recent" class="recent"></ul></article>
+            <article class="panel"><header class="panel-header"><div><h2>Resumo do Pipeline</h2><p>Distribuição por etapa comercial.</p></div></header><ul id="funnel" class="funnel"></ul><a class="text-link" href="#pipeline">Abrir Smart Pipeline →</a></article>
+          </div>
+        </section>
+        <section data-view="client" aria-labelledby="client-title" hidden>
+          <div class="heading"><p class="eyebrow">EMPRESA CLIENTE</p><h1 id="client-title" tabindex="-1">Client Workspace</h1><p>Contexto comercial da empresa atendida pela Atlas Mídia.</p></div>
+          <div class="two-col">
+            <article class="panel"><div class="client-profile"><span class="initials client-initials">NS</span><div><span class="eyebrow">EMPRESA FICTÍCIA</span><h2>Nexo Solar</h2><p>Energia solar para empresas</p></div></div><dl class="details"><div><dt>Agência responsável</dt><dd>Atlas Mídia</dd></div><div><dt>Segmento</dt><dd>Energia renovável B2B</dd></div><div><dt>Objetivo</dt><dd>Priorizar contatos empresariais com intenção de compra</dd></div></dl></article>
+            <article class="panel"><header class="panel-header"><div><h2>Atividade do cliente</h2><p>Indicadores da sua sessão de demonstração.</p></div></header><ul id="client-funnel" class="funnel"></ul><a class="text-link" href="#pipeline">Ver Pipeline →</a></article>
+          </div>
+        </section>
+        <section data-view="intelligence" aria-labelledby="intelligence-title" hidden>
+          <div class="heading"><p class="eyebrow">QUALIFICAÇÃO DE LEADS</p><h1 id="intelligence-title" tabindex="-1">Lead Intelligence</h1><p>Identifique o potencial de cada lead e saiba o que fazer a seguir.</p></div>
+          <div class="notice"><svg aria-hidden="true"><use href="#icon-spark"/></svg><div><strong>Qualificação heurística · Modo demonstração</strong><span>As regras avaliam os dados fictícios no servidor. O Gemini não é acionado neste workspace.</span></div></div>
+          <div class="two-col">
+            <article class="panel"><header class="panel-header"><div><h2>Cadastrar lead</h2><p>Use somente dados fictícios.</p></div><button class="button secondary compact" id="example">Preencher exemplo</button></header>
+              <form id="lead-form">
+                <div class="form-grid"><label>Nome <input name="name" required minlength="2" maxlength="80" placeholder="Ex.: Pessoa Demonstração"></label><label>Empresa <input name="company" required minlength="2" maxlength="80" placeholder="Ex.: Grupo Aurora"></label><label>Cargo <small>opcional</small><input name="role" maxlength="80" placeholder="Ex.: Diretor de operações"></label><label>E-mail fictício <small>opcional</small><input type="email" name="email" maxlength="120" placeholder="contato@empresa.test"></label></div>
+                <label>Contexto comercial <textarea name="message" required minlength="8" maxlength="1200" rows="4" placeholder="Descreva a necessidade, o prazo e os sinais de compra."></textarea></label>
+                <p id="form-error" class="field-error" role="alert" hidden></p>
+                <button class="button primary" id="qualify" type="submit"><svg aria-hidden="true"><use href="#icon-spark"/></svg>Cadastrar e qualificar</button>
+              </form>
+            </article>
+            <article class="panel analysis"><header class="panel-header"><div><h2>Análise do lead</h2><p>Score, evidências e próximos passos.</p></div></header><div id="analysis"></div></article>
+          </div>
+        </section>
+        <section data-view="pipeline" aria-labelledby="pipeline-title" hidden>
+          <div class="heading"><p class="eyebrow">ACOMPANHAMENTO COMERCIAL</p><h1 id="pipeline-title" tabindex="-1">Smart Pipeline</h1><p>Movimente oportunidades entre as etapas comerciais. A análise do lead é preservada.</p></div>
+          <div class="board-heading"><div><span class="initials client-initials">NS</span><div><strong>Nexo Solar</strong><span id="pipeline-count">0 oportunidades</span></div></div><span>As alterações são salvas automaticamente.</span></div>
+          <div class="board" id="board"></div>
+        </section>
+      </div>
+    </div>
+    <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+  </main>
+</body>
+</html>

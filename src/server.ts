@@ -11,9 +11,9 @@ async function ensureDatabaseReady(): Promise<void> {
   await testDbConnection();
 
   const tableCheck = await db.execute(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('tenants', 'leads', 'qualifications')"
+    "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('tenants', 'leads', 'qualifications', 'intelligence_demo_leads')"
   );
-  if (tableCheck.rows.length !== 3) {
+  if (tableCheck.rows.length !== 4) {
     const schemaPath = path.resolve(process.cwd(), "db", "schema.sql");
     await db.executeMultiple(fs.readFileSync(schemaPath, "utf-8"));
     console.log("[Database] Schema SQL aplicado com sucesso.");

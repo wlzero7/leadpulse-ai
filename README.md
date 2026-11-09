@@ -1,5 +1,14 @@
 # LeadPulse AI — Full-Stack Platform & Cognitive Lead Qualifier
 
+## Demonstração comercial do LeadPulse Intelligence
+
+Após iniciar o servidor, abra [`/intelligence/`](http://localhost:3000/intelligence/). A jornada apresenta a agência fictícia Atlas Mídia e seu cliente fictício Nexo Solar. Em **Lead Intelligence**, use **Preencher exemplo** e **Cadastrar e qualificar**. Em **Smart Pipeline**, use o seletor do cartão para mover a oportunidade. O **Overview** e o **Client Workspace** refletem a alteração.
+
+A demo usa a heurística local no servidor. Ela não chama o Gemini nem acessa o conjunto de leads da API original. Os registros ficam em uma tabela exclusiva no banco configurado (Turso ou SQLite local), com acesso restrito à sessão do navegador. O cookie de sessão vale sete dias e cada sessão admite até 24 leads. Use exclusivamente dados fictícios. A sessão pública da demo não oferece autenticação de agência ou de empresa para uso real.
+
+Para validar o fluxo HTTP e a persistência após reinício em banco temporário, execute `pnpm run build` e `pnpm run test:intelligence`.
+
+
 > Plataforma B2B de Inteligência Comercial e Qualificação Autônoma de Leads Inbound via IA.
 
 ---

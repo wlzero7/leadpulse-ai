@@ -95,3 +95,15 @@ CREATE TABLE IF NOT EXISTS qualifications (
 
 CREATE INDEX IF NOT EXISTS idx_qualifications_lead_id ON qualifications(lead_id);
 CREATE INDEX IF NOT EXISTS idx_qualifications_tenant_id ON qualifications(tenant_id);
+
+-- Isolated commercial demo. No relation to tenant data or API credentials.
+CREATE TABLE IF NOT EXISTS intelligence_demo_leads (
+    id TEXT PRIMARY KEY,
+    session_key TEXT NOT NULL,
+    stage TEXT NOT NULL DEFAULT 'NEW' CHECK(stage IN ('NEW', 'CONTACTED', 'PROPOSAL', 'WON')),
+    payload TEXT NOT NULL,
+    analysis TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_intelligence_demo_session ON intelligence_demo_leads(session_key, created_at DESC);

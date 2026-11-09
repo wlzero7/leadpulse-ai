@@ -10,7 +10,8 @@
     "build": "rimraf dist && tsc",
     "start": "node dist/server.js",
     "db:migrate": "tsx db/migrate.ts",
-    "test:ingest": "tsx test-ingest.ts"
+    "test:ingest": "tsx test-ingest.ts",
+    "test:intelligence": "tsx test-intelligence.ts"
   },
   "keywords": [
     "lead-qualification",

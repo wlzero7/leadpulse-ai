@@ -49,7 +49,7 @@ export class AIService {
       } else {
         // Fallback cognitivo para testes locais, offline ou validações sem chave de API ativa
         console.warn("⚠️ [AI Service] GEMINI_API_KEY não configurada ou definida como mock. Executando qualificação heurística local.");
-        qualificationData = this.heuristicEvaluation(lead);
+        qualificationData = evaluateHeuristically(lead).qualification;
         modelUsed = "leadpulse-heuristic-v1";
         rawApiResponse = JSON.stringify({
           source: "local-heuristic-engine",
@@ -193,64 +193,68 @@ ${lead.raw_payload}
       rawResponse: responseText,
     };
   }
+}
 
-  /**
-   * Avaliação heurística inteligente para modo offline / desenvolvimento sem chaves
-   */
-  private heuristicEvaluation(lead: Lead): AIQualificationOutput {
-    let score = 50;
-    let urgency: AIQualificationOutput["urgency_detected"] = "MEDIUM";
-    let budget: AIQualificationOutput["budget_detected"] = "UNKNOWN";
+export function evaluateHeuristically(lead: Pick<Lead, "name" | "company" | "role" | "email" | "message" | "raw_payload">) {
+  let score = 50;
+  const evidence: { label: string; impact: number }[] = [];
+  let urgency: AIQualificationOutput["urgency_detected"] = "MEDIUM";
+  let budget: AIQualificationOutput["budget_detected"] = "UNKNOWN";
 
-    const payloadText = (lead.raw_payload + " " + (lead.message ?? "")).toLowerCase();
-    const role = (lead.role ?? "").toLowerCase();
+  const payloadText = (lead.raw_payload + " " + (lead.message ?? "")).toLowerCase();
+  const role = (lead.role ?? "").toLowerCase();
 
-    // Sinais de Autoridade (Decisor)
-    if (/diretor|vp|head|ceo|coo|cfo|fundador|owner|gerente/i.test(role)) {
-      score += 20;
-    }
-
-    // Sinais de Urgência
-    if (/urgente|imediato|r[aá]pido|este m[eê]s|o quanto antes/i.test(payloadText)) {
-      score += 15;
-      urgency = "HIGH";
-    }
-
-    // Sinais de Volume / Orçamento
-    if (/mil|or[çc]amento|budget|investimento|5000|10000|crm|equipe/i.test(payloadText)) {
-      score += 15;
-      budget = "HIGH";
-    }
-
-    // Penalizações por dados incompletos
-    if (!lead.email || !lead.email.includes("@")) {
-      score -= 30;
-    }
-    if (!lead.company) {
-      score -= 10;
-    }
-
-    score = Math.max(5, Math.min(98, score));
-
-    let fit: AIQualificationOutput["fit_level"] = "MEDIUM";
-    if (score >= 80) fit = "HIGH";
-    else if (score >= 50) fit = "MEDIUM";
-    else if (score >= 30) fit = "LOW";
-    else fit = "UNQUALIFIED";
-
-    return {
-      score,
-      fit_level: fit,
-      summary: `Lead B2B de ${lead.company || "Empresa sob consulta"}, representado por ${lead.name || "Contato Comercial"} (${lead.role || "Cargo não especificado"}).`,
-      reasoning: `Análise baseada em autoridade (${lead.role || "Não declarada"}), menção a volume operacional e canais de contato fornecidos (${lead.email || "E-mail pendente"}).`,
-      budget_detected: budget,
-      urgency_detected: urgency,
-      recommended_next_step:
-        score >= 70
-          ? "Priorizar contato telefônico e agendamento de call de demonstração nas próximas 2 horas."
-          : "Encaminhar para cadência de nutrição e e-mail comercial com apresentação institucional.",
-    };
+  // Sinais de Autoridade (Decisor)
+  if (/diretor|vp|head|ceo|coo|cfo|fundador|owner|gerente/i.test(role)) {
+    score += 20;
+    evidence.push({ label: "Cargo com sinal de decisão", impact: 20 });
   }
+
+  // Sinais de Urgência
+  if (/urgente|imediato|r[aá]pido|este m[eê]s|o quanto antes/i.test(payloadText)) {
+    score += 15;
+    evidence.push({ label: "Menção a urgência", impact: 15 });
+    urgency = "HIGH";
+  }
+
+  // Sinais de Volume / Orçamento
+  if (/mil|or[çc]amento|budget|investimento|5000|10000|crm|equipe/i.test(payloadText)) {
+    score += 15;
+    evidence.push({ label: "Menção a orçamento ou volume", impact: 15 });
+    budget = "HIGH";
+  }
+
+  // Penalizações por dados incompletos
+  if (!lead.email || !lead.email.includes("@")) {
+    score -= 30;
+    evidence.push({ label: "E-mail ausente", impact: -30 });
+  }
+  if (!lead.company) {
+    score -= 10;
+    evidence.push({ label: "Empresa ausente", impact: -10 });
+  }
+
+  score = Math.max(5, Math.min(98, score));
+
+  let fit: AIQualificationOutput["fit_level"] = "MEDIUM";
+  if (score >= 80) fit = "HIGH";
+  else if (score >= 50) fit = "MEDIUM";
+  else if (score >= 30) fit = "LOW";
+  else fit = "UNQUALIFIED";
+
+  const qualification: AIQualificationOutput = {
+    score,
+    fit_level: fit,
+    summary: `Lead B2B de ${lead.company || "Empresa sob consulta"}, representado por ${lead.name || "Contato Comercial"} (${lead.role || "Cargo não especificado"}).`,
+    reasoning: `Análise baseada em autoridade (${lead.role || "Não declarada"}), menção a volume operacional e canais de contato fornecidos (${lead.email || "E-mail pendente"}).`,
+    budget_detected: budget,
+    urgency_detected: urgency,
+    recommended_next_step:
+      score >= 70
+        ? "Priorizar contato telefônico e agendamento de call de demonstração nas próximas 2 horas."
+        : "Encaminhar para cadência de nutrição e e-mail comercial com apresentação institucional.",
+  };
+  return { qualification, evidence };
 }
 
 export const aiService = new AIService();
