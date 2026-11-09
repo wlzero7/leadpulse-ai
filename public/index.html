@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeadPulse AI — Qualificação Autônoma de Leads B2B via IA</title>
+  <meta name="description" content="Plataforma de inteligência comercial e qualificação automática de leads inbound em tempo real utilizando Gemini 2.5 Flash e arquitetura multi-tenant.">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- BACKGROUND GLOWS -->
+  <div class="glow-bg top-glow"></div>
+  <div class="glow-bg side-glow"></div>
+
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="/" class="brand-link">
+        <img src="/assets/logo.svg" alt="LeadPulse AI Logo" class="brand-logo">
+      </a>
+      <nav class="nav-links">
+        <a href="#sandbox">Sandbox Interativo</a>
+        <a href="#como-funciona">Como Funciona</a>
+        <a href="#beneficios">Benefícios</a>
+        <a href="/api/v1/brand" target="_blank">Brand Guide</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="#sandbox" class="btn btn-primary pulse-btn">Testar Grátis</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="hero-section">
+    <div class="container hero-container">
+      <div class="badge-pill">
+        <span class="badge-dot"></span>
+        MOTOR COGNITIVO GEMINI 2.5 FLASH + TURSO DB
+      </div>
+      
+      <h1 class="hero-title">
+        Qualifique <span class="gradient-text">100% dos seus Leads Inbound</span> em 30 Segundos com Inteligência Artificial
+      </h1>
+      
+      <p class="hero-subtitle">
+        Receba leads de formulários, landing pages e webhooks em tempo real. Nossa IA cognitiva analisa sinais de compra, valida orçamento, calcula o score de propensão e notifica seu time de vendas instantaneamente.
+      </p>
+
+      <div class="hero-ctas">
+        <a href="#sandbox" class="btn btn-primary btn-lg">
+          ⚡ Experimentar Sandbox ao Vivo
+        </a>
+        <a href="#api-preview" class="btn btn-secondary btn-lg">
+          Ver Especificação da API
+        </a>
+      </div>
+
+      <!-- METRICS BANNER -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val">+350%</div>
+          <div class="metric-label">Velocidade de Resposta a Leads</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">&lt; 2s</div>
+          <div class="metric-label">Tempo Médio de Qualificação</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">100%</div>
+          <div class="metric-label">Isolamento Multi-Tenant B2B</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">Zero</div>
+          <div class="metric-label">Leads Frios no Tempo dos AEs</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTERACTIVE SANDBOX SECTION -->
+  <section id="sandbox" class="sandbox-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge-pill green-pill">DEMO INTERATIVA AO VIVO</div>
+        <h2 class="section-title">Testador de Qualificação em Tempo Real</h2>
+        <p class="section-subtitle">
+          Simule a ingestão de um lead via webhook e acompanhe a avaliação cognitiva da IA processada no servidor Express + Turso DB.
+        </p>
+      </div>
+
+      <!-- SANDBOX GRID -->
+      <div class="sandbox-grid">
+        <!-- FORMULÁRIO DE ENTRADA -->
+        <div class="sandbox-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="icon-circle">📥</span>
+              <div>
+                <h3>Simular Ingestão de Lead</h3>
+                <p>Payload enviado para <code>POST /api/v1/webhooks/ingest</code></p>
+              </div>
+            </div>
+            <div class="preset-buttons">
+              <button type="button" class="btn-preset active" data-preset="hot">🔥 Lead Quente</button>
+              <button type="button" class="btn-preset" data-preset="warm">🌤️ Lead Morno</button>
+              <button type="button" class="btn-preset" data-preset="cold">❄️ Lead Frio</button>
+            </div>
+          </div>
+
+          <form id="lead-form" class="lead-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="name">Nome do Contato *</label>
+                <input type="text" id="name" name="name" required placeholder="Ex: Roberto Albuquerque">
+              </div>
+              <div class="form-group">
+                <label for="email">E-mail Corporativo *</label>
+                <input type="email" id="email" name="email" required placeholder="Ex: roberto@empresa.com.br">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="company">Empresa / Organização</label>
+                <input type="text" id="company" name="company" placeholder="Ex: LogTech Brasil S/A">
+              </div>
+              <div class="form-group">
+                <label for="role">Cargo / Função do Decisor</label>
+                <input type="text" id="role" name="role" placeholder="Ex: Diretor de Operações">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Telefone / WhatsApp Comercial</label>
+              <input type="text" id="phone" name="phone" placeholder="Ex: +55 (11) 98765-4321">
+            </div>
+
+            <div class="form-group">
+              <label for="message">Mensagem ou Dores Declaradas</label>
+              <textarea id="message" name="message" rows="3" placeholder="Ex: Recebemos 8.000 leads/mês e precisamos de automação imediata para nosso CRM Salesforce."></textarea>
+            </div>
+
+            <button type="submit" id="submit-btn" class="btn btn-primary btn-block">
+              <span class="btn-text">🚀 Qualificar Lead com IA Agora</span>
+              <span class="spinner hidden"></span>
+            </button>
+          </form>
+        </div>
+
+        <!-- RELATÓRIO COGNITIVO DA IA -->
+        <div class="sandbox-card report-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="icon-circle ai-icon">🧠</span>
+              <div>
+                <h3>Relatório Cognitivo da IA</h3>
+                <p>Resultado estruturado gerado em segundo plano</p>
+              </div>
+            </div>
+            <div id="status-tag" class="status-tag status-idle">Aguardando Envio</div>
+          </div>
+
+          <!-- ESTADO INICIAL (VAZIO) -->
+          <div id="empty-state" class="empty-state">
+            <div class="empty-icon">📊</div>
+            <h4>Nenhum lead analisado ainda</h4>
+            <p>Preencha os dados no formulário ao lado ou selecione um preset para testar a qualificação em tempo real.</p>
+          </div>
+
+          <!-- ESTADO DE PROCESSAMENTO (LOADING) -->
+          <div id="loading-state" class="loading-state hidden">
+            <div class="loader-pulse"></div>
+            <h4>Analisando Lead com Gemini AI...</h4>
+            <p id="loading-step">Validando dados e sinais de compra...</p>
+          </div>
+
+          <!-- ESTADO DE RESULTADO (CARD DE QUALIFICAÇÃO) -->
+          <div id="result-state" class="result-state hidden">
+            <!-- SCORE & FIT BANNER -->
+            <div class="score-banner">
+              <div class="score-circle-container">
+                <div class="score-number" id="res-score">85</div>
+                <div class="score-denom">/ 100</div>
+              </div>
+              <div class="score-meta">
+                <div class="fit-badge" id="res-fit">FIT: HIGH</div>
+                <div class="lead-name-meta" id="res-lead-name">Roberto Albuquerque</div>
+                <div class="lead-company-meta" id="res-lead-company">LogTech Brasil S/A</div>
+              </div>
+            </div>
+
+            <!-- DETALHES RÁPIDOS (URGÊNCIA & BUDGET) -->
+            <div class="signals-grid">
+              <div class="signal-box">
+                <span class="signal-label">Urgência Detectada</span>
+                <span class="signal-val" id="res-urgency">ALTA</span>
+              </div>
+              <div class="signal-box">
+                <span class="signal-label">Orçamento Estimado</span>
+                <span class="signal-val" id="res-budget">CONFIRMADO</span>
+              </div>
+              <div class="signal-box">
+                <span class="signal-label">Motor de Análise</span>
+                <span class="signal-val mono" id="res-model">gemini-2.5-flash</span>
+              </div>
+            </div>
+
+            <!-- RESUMO EXECUTIVO -->
+            <div class="report-block">
+              <div class="report-block-title">📋 Resumo Executivo para Vendas</div>
+              <p class="report-block-content" id="res-summary">
+                Lead altamente qualificado com poder de decisão direto. Apresenta demanda latente por automação comercial de grande escala.
+              </p>
+            </div>
+
+            <!-- RACIONAL DA NOTA -->
+            <div class="report-block">
+              <div class="report-block-title">🔍 Racional da Pontuação</div>
+              <p class="report-block-content text-muted" id="res-reasoning">
+                Contato validado com e-mail corporativo válido, cargo de liderança (Diretoria) e menção a orçamento pré-alocado.
+              </p>
+            </div>
+
+            <!-- PRÓXIMO PASSO RECOMENDADO -->
+            <div class="report-action-box">
+              <div class="action-icon">🎯</div>
+              <div>
+                <div class="action-title">Ação Recomendada para o SDR / Closer:</div>
+                <div class="action-desc" id="res-action">
+                  Priorizar contato telefônico e agendamento de call de demonstração nas próximas 2 horas.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMO FUNCIONA -->
+  <section id="como-funciona" class="how-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge-pill">FLUXO DE AUTOMAÇÃO</div>
+        <h2 class="section-title">Como o LeadPulse AI Opera na Prática</h2>
+        <p class="section-subtitle">Arquitetura de microsserviços desacoplada com garantia de resposta instantânea.</p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">01</div>
+          <h3>Ingestão de Lead</h3>
+          <p>Seus formulários (Typeform, HubSpot, Elementor, Webflow) enviam um POST para o endpoint <code>/api/v1/webhooks/ingest</code> com a chave do seu tenant.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">02</div>
+          <h3>Processamento Cognitivo</h3>
+          <p>O Gemini 2.5 Flash extrai cargos, dores, urgência e autoridade do payload bruto sem travar a requisição original.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">03</div>
+          <h3>Roteamento Inteligente</h3>
+          <p>O score (0 a 100) e a qualificação são gravados no Turso DB no Edge, prontos para notificar seu CRM ou Slack em tempo real.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENEFÍCIOS B2B -->
+  <section id="beneficios" class="benefits-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge-pill">VANTAGENS CORPORATIVAS</div>
+        <h2 class="section-title">Construído para Equipes de Vendas de Alta Performance</h2>
+      </div>
+
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <div class="benefit-icon">⏱️</div>
+          <h3>Zero Desperdício de Tempo</h3>
+          <p>Elimine até 80% do tempo gasto por SDRs tentando falar com estudantes, concorrentes ou contatos sem fit comercial.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🔗</div>
+          <h3>Integração Universal</h3>
+          <p>Compatível nativamente com Zapier, Make, n8n, Webhooks genéricos e qualquer stack web moderna.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🛡️</div>
+          <h3>Isolamento Multi-Tenant</h3>
+          <p>Cada cliente B2B opera em sandbox estrito com segredos criptográficos exclusivos e banco de dados distribuído.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">⚡</div>
+          <h3>Custo Zero na Validação</h3>
+          <p>Arquitetura otimizada para rodar em Render Free e Turso Cloud Edge, garantindo máxima rentabilidade na fase inicial.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- API PREVIEW -->
+  <section id="api-preview" class="api-section">
+    <div class="container">
+      <div class="api-box">
+        <div class="api-header">
+          <span class="api-dot red"></span>
+          <span class="api-dot yellow"></span>
+          <span class="api-dot green"></span>
+          <span class="api-title">cURL — Ingestão Direta de Leads</span>
+        </div>
+        <pre class="api-code"><code><span class="c-method">curl</span> -X POST http://localhost:3000/api/v1/webhooks/ingest \
+  -H <span class="c-str">"Content-Type: application/json"</span> \
+  -H <span class="c-str">"X-API-Key: lp_live_sample_key_1234567890abcdef"</span> \
+  -d <span class="c-str">'{
+    "source": "TYPEFORM",
+    "name": "Mariana Souza",
+    "email": "mariana@fintech.com.br",
+    "company": "Fintech Soluções",
+    "role": "VP de Vendas",
+    "message": "Precisamos qualificar 5.000 leads inbound com urgência."
+  }'</span></code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-brand">
+        <img src="/assets/logo.svg" alt="LeadPulse AI Logo" class="footer-logo">
+        <p>Inteligência Comercial Autônoma & Qualificação de Leads B2B.</p>
+      </div>
+      <div class="footer-meta">
+        <p>E-mail oficial: <a href="mailto:leadpulseai.official@gmail.com">leadpulseai.official@gmail.com</a></p>
+        <p>GitHub Org: <a href="https://github.com/leadpulse-ai" target="_blank">leadpulse-ai</a></p>
+        <p class="copyright">&copy; 2026 LeadPulse AI Technologies. Todos os direitos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "brand": "LeadPulse AI",
+  "legal_name": "LeadPulse AI Technologies",
+  "official_email": "leadpulseai.official@gmail.com",
+  "github_org": "leadpulse-ai",
+  "tagline": "Autonomous Commercial Intelligence & Cognitive Lead Qualification",
+  "colors": {
+    "primary_blue": "#2563EB",
+    "emerald_green": "#10B981",
+    "dark_slate": "#0F172A",
+    "surface": "#1E293B",
+    "text_primary": "#F8FAFC",
+    "text_muted": "#94A3B8"
+  },
+  "typography": {
+    "font_family": "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    "weights": ["400", "600", "700", "900"]
+  },
+  "symbolism": {
+    "sales_funnel": "Representa o funil de aquisição e conversão de leads B2B",
+    "pulse_line": "Simula o batimento comercial em tempo real (LeadPulse)",
+    "ai_nodes": "Representa as sinapses de inteligência artificial profunda (Gemini 2.5 Flash)"
+  },
+  "assets": {
+    "logo_svg": "/assets/logo.svg",
+    "icon_svg": "/assets/icon.svg",
+    "logo_png": "/assets/logo.png",
+    "favicon": "/favicon.ico"
+  }
+}

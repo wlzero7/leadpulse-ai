@@ -1,0 +1,52 @@
+{
+  "name": "leadpulse-ai",
+  "version": "1.0.0",
+  "description": "LeadPulse AI - B2B Commercial Intelligence & Autonomous AI Lead Qualification Platform",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "start:all": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "build": "rimraf dist && tsc",
+    "start": "node dist/server.js",
+    "db:migrate": "tsx db/migrate.ts",
+    "test:ingest": "tsx test-ingest.ts"
+  },
+  "keywords": [
+    "lead-qualification",
+    "b2b-saas",
+    "ai-agent",
+    "turso",
+    "libsql",
+    "express",
+    "typescript",
+    "gemini"
+  ],
+  "author": "LeadPulse AI Team <leadpulseai.official@gmail.com>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@google/genai": "^3.0.0",
+    "@libsql/client": "^0.14.0",
+    "argon2": "^0.41.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20.14.0",
+    "isomorphic-git": "^1.44.11",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
