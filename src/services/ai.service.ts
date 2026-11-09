@@ -13,6 +13,11 @@ export interface AIQualificationOutput {
   budget_detected: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
   urgency_detected: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
   recommended_next_step: string;
+  notifications_dispatched?: {
+    slack?: boolean;
+    whatsapp?: boolean;
+    crm?: boolean;
+  };
 }
 
 export class AIService {
@@ -50,6 +55,19 @@ export class AIService {
           evaluated_at: new Date().toISOString(),
           output: qualificationData,
         });
+      }
+
+      // Simulação de Alertas Multicanal para Leads Quentes (Score >= 80)
+      if (qualificationData.score >= 80) {
+        qualificationData.notifications_dispatched = {
+          slack: true,
+          whatsapp: true,
+          crm: true,
+        };
+        console.log(`🔥 [Channel Alert] LEAD QUENTE DETECTADO (Score ${qualificationData.score}/100)! Disparando alertas automáticos:`);
+        console.log(`   📢 [Slack] Notificação enviada para o canal #leads-hot: ${lead.company || lead.name} (${qualificationData.fit_level})`);
+        console.log(`   💬 [WhatsApp] Alerta push para o time de Closers: Agendar call com ${lead.name} (${lead.phone || lead.email})`);
+        console.log(`   💼 [CRM] Oportunidade Deal criada em 'Prioridade Máxima' no CRM.`);
       }
 
       // 1. Grava o resultado na tabela de qualificações
@@ -122,7 +140,7 @@ ${lead.raw_payload}
 4. REASONING: Explicação detalhada dos fatores que justificam o score atribuído.
 5. BUDGET_DETECTED: HIGH | MEDIUM | LOW | UNKNOWN
 6. URGENCY_DETECTED: HIGH | MEDIUM | LOW | UNKNOWN
-7. RECOMMENDED_NEXT_STEP: Ação tática específica recomendada para a equipe de vendas (ex: Agendar call de descoberta com AE sênior, Enviar material educativo por e-mail, Descartar lead).
+7. RECOMMENDED_NEXT_STEP: Ação tática específica recomendada para a equipe de vendas.
 `;
 
     const response = await this.client!.models.generateContent({

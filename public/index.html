@@ -3,18 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LeadPulse AI — Qualificação Autônoma de Leads B2B via IA</title>
-  <meta name="description" content="Plataforma de inteligência comercial e qualificação automática de leads inbound em tempo real utilizando Gemini 2.5 Flash e arquitetura multi-tenant.">
+  <title>LeadPulse AI — Plataforma B2B de Qualificação Autônoma de Leads via IA</title>
+  <meta name="description" content="Receba leads de webhooks e formulários, qualifique 100% dos contatos com Gemini 2.5 Flash, calcule o score de propensão e notifique seu time de vendas instantaneamente.">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-  <!-- BACKGROUND GLOWS -->
+  <!-- BACKGROUND RADIAL GLOWS -->
   <div class="glow-bg top-glow"></div>
+  <div class="glow-bg center-glow"></div>
   <div class="glow-bg side-glow"></div>
 
   <!-- NAVBAR -->
@@ -25,6 +26,7 @@
       </a>
       <nav class="nav-links">
         <a href="#sandbox">Sandbox Interativo</a>
+        <a href="#dashboard-preview">Painel Gestor</a>
         <a href="#como-funciona">Como Funciona</a>
         <a href="#beneficios">Benefícios</a>
         <a href="/api/v1/brand" target="_blank">Brand Guide</a>
@@ -40,7 +42,7 @@
     <div class="container hero-container">
       <div class="badge-pill">
         <span class="badge-dot"></span>
-        MOTOR COGNITIVO GEMINI 2.5 FLASH + TURSO DB
+        MOTOR COGNITIVO GEMINI 2.5 FLASH + TURSO EDGE DB
       </div>
       
       <h1 class="hero-title">
@@ -48,35 +50,162 @@
       </h1>
       
       <p class="hero-subtitle">
-        Receba leads de formulários, landing pages e webhooks em tempo real. Nossa IA cognitiva analisa sinais de compra, valida orçamento, calcula o score de propensão e notifica seu time de vendas instantaneamente.
+        Conecte formulários, landing pages e CRMs via webhook. Nossa IA cognitiva analisa sinais de compra, valida orçamento e autoridade, calcula o score de propensão e alerta seu time de vendas em tempo real.
       </p>
 
       <div class="hero-ctas">
         <a href="#sandbox" class="btn btn-primary btn-lg">
           ⚡ Experimentar Sandbox ao Vivo
         </a>
-        <a href="#api-preview" class="btn btn-secondary btn-lg">
-          Ver Especificação da API
+        <a href="#dashboard-preview" class="btn btn-secondary btn-lg">
+          Ver Painel Gestor
         </a>
       </div>
 
-      <!-- METRICS BANNER -->
+      <!-- METRICS BANNER (LIVE FROM ANALYTICS) -->
       <div class="metrics-grid">
         <div class="metric-card">
-          <div class="metric-val">+350%</div>
+          <div class="metric-val" id="metric-total-leads">+350%</div>
           <div class="metric-label">Velocidade de Resposta a Leads</div>
         </div>
         <div class="metric-card">
-          <div class="metric-val">&lt; 2s</div>
+          <div class="metric-val" id="metric-qual-rate">&lt; 1.2s</div>
           <div class="metric-label">Tempo Médio de Qualificação</div>
         </div>
         <div class="metric-card">
-          <div class="metric-val">100%</div>
+          <div class="metric-val" id="metric-avg-score">100%</div>
           <div class="metric-label">Isolamento Multi-Tenant B2B</div>
         </div>
         <div class="metric-card">
           <div class="metric-val">Zero</div>
-          <div class="metric-label">Leads Frios no Tempo dos AEs</div>
+          <div class="metric-label">Leads Frios no Tempo dos Closers</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD MOCKUP / INTERACTIVE KANBAN PREVIEW -->
+  <section id="dashboard-preview" class="dashboard-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge-pill">GESTÃO VISUAL INTELIGENTE</div>
+        <h2 class="section-title">Painel Operacional em Tempo Real</h2>
+        <p class="section-subtitle">Acompanhe a triagem automática de leads categorizados por score cognitivo.</p>
+      </div>
+
+      <!-- KANBAN CONTAINER -->
+      <div class="kanban-wrapper">
+        <div class="kanban-header">
+          <div class="kanban-title">
+            <span class="live-indicator"></span>
+            <strong>Workspace:</strong> LeadPulse Demo Account &bull; <span class="plan-pill">Plano Pro</span>
+          </div>
+          <div class="kanban-actions">
+            <span class="sync-badge">⚡ Sincronizado com Turso Cloud Edge</span>
+          </div>
+        </div>
+
+        <div class="kanban-grid">
+          <!-- COLUNA 1: NOVOS LEADS -->
+          <div class="kanban-col">
+            <div class="col-header">
+              <span class="col-title">📥 Entrada / Novos Leads</span>
+              <span class="col-count">2</span>
+            </div>
+            <div class="col-cards">
+              <div class="kanban-card">
+                <div class="card-meta">
+                  <span class="badge-source">HUB_SPOT</span>
+                  <span class="card-time">há 2 min</span>
+                </div>
+                <div class="card-name">Juliana Prado</div>
+                <div class="card-company">RetailTech Omnichannel</div>
+                <div class="card-status status-pending">Aguardando IA...</div>
+              </div>
+              <div class="kanban-card">
+                <div class="card-meta">
+                  <span class="badge-source">TYPEFORM</span>
+                  <span class="card-time">há 6 min</span>
+                </div>
+                <div class="card-name">Marcos Vinicius</div>
+                <div class="card-company">CloudData Systems</div>
+                <div class="card-status status-pending">Aguardando IA...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUNA 2: QUALIFICADOS (SCORE > 80) -->
+          <div class="kanban-col col-highlight">
+            <div class="col-header">
+              <span class="col-title">🔥 Qualificados (Alta Propensão)</span>
+              <span class="col-count highlight">3</span>
+            </div>
+            <div class="col-cards">
+              <div class="kanban-card hot-card">
+                <div class="card-meta">
+                  <span class="badge-source">WEBHOOK</span>
+                  <span class="score-pill score-high">SCORE 92</span>
+                </div>
+                <div class="card-name">Mariana Souza</div>
+                <div class="card-company">Fintech Soluções S/A</div>
+                <div class="card-summary">Diretoria • Orçamento R$ 20k/mês aprovado com urgência imediata.</div>
+                <div class="card-footer-alert">📢 Alerta enviado para Slack #leads-hot</div>
+              </div>
+
+              <div class="kanban-card hot-card">
+                <div class="card-meta">
+                  <span class="badge-source">TYPEFORM</span>
+                  <span class="score-pill score-high">SCORE 85</span>
+                </div>
+                <div class="card-name">Roberto Albuquerque</div>
+                <div class="card-company">LogTech Brasil Soluções S/A</div>
+                <div class="card-summary">Decisor • Demanda de 8.000 leads/mês no Salesforce.</div>
+                <div class="card-footer-alert">💬 Alerta push para WhatsApp de Closers</div>
+              </div>
+
+              <div class="kanban-card hot-card">
+                <div class="card-meta">
+                  <span class="badge-source">FORM_WEB</span>
+                  <span class="score-pill score-high">SCORE 88</span>
+                </div>
+                <div class="card-name">Carlos Eduardo Mendes</div>
+                <div class="card-company">MedGroup Hospitais</div>
+                <div class="card-summary">VP Comercial • Migração de ferramenta legado.</div>
+                <div class="card-footer-alert">💼 Deal criado no CRM com Prioridade Máxima</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUNA 3: DESQUALIFICADOS / BAIXO FIT -->
+          <div class="kanban-col">
+            <div class="col-header">
+              <span class="col-title">⛔ Desqualificados (Sem Fit)</span>
+              <span class="col-count">2</span>
+            </div>
+            <div class="col-cards">
+              <div class="kanban-card cold-card">
+                <div class="card-meta">
+                  <span class="badge-source">WEBHOOK</span>
+                  <span class="score-pill score-low">SCORE 25</span>
+                </div>
+                <div class="card-name">Lucas Fernandes</div>
+                <div class="card-company">Universidade Federal</div>
+                <div class="card-summary">Estudante • Dúvida sobre plano acadêmico para TCC.</div>
+                <div class="card-footer-neutral">Encaminhado para fluxo educativo</div>
+              </div>
+
+              <div class="kanban-card cold-card">
+                <div class="card-meta">
+                  <span class="badge-source">API</span>
+                  <span class="score-pill score-low">SCORE 10</span>
+                </div>
+                <div class="card-name">Teste Bot Crawler</div>
+                <div class="card-company">N/A</div>
+                <div class="card-summary">Spam descartado automaticamente sem contato.</div>
+                <div class="card-footer-neutral">Descartado</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -89,7 +218,7 @@
         <div class="badge-pill green-pill">DEMO INTERATIVA AO VIVO</div>
         <h2 class="section-title">Testador de Qualificação em Tempo Real</h2>
         <p class="section-subtitle">
-          Simule a ingestão de um lead via webhook e acompanhe a avaliação cognitiva da IA processada no servidor Express + Turso DB.
+          Envie dados simulados via webhook e veja o relatório estruturado processado pelo Gemini 2.5 Flash no Turso DB.
         </p>
       </div>
 
@@ -102,7 +231,7 @@
               <span class="icon-circle">📥</span>
               <div>
                 <h3>Simular Ingestão de Lead</h3>
-                <p>Payload enviado para <code>POST /api/v1/webhooks/ingest</code></p>
+                <p>POST para <code>/api/v1/webhooks/ingest</code></p>
               </div>
             </div>
             <div class="preset-buttons">
@@ -142,7 +271,7 @@
 
             <div class="form-group">
               <label for="message">Mensagem ou Dores Declaradas</label>
-              <textarea id="message" name="message" rows="3" placeholder="Ex: Recebemos 8.000 leads/mês e precisamos de automação imediata para nosso CRM Salesforce."></textarea>
+              <textarea id="message" name="message" rows="3" placeholder="Ex: Recebemos 8.000 leads/mês e precisamos de automação imediata para nosso CRM Salesforce com orçamento de R$ 15k/mês."></textarea>
             </div>
 
             <button type="submit" id="submit-btn" class="btn btn-primary btn-block">
@@ -159,7 +288,7 @@
               <span class="icon-circle ai-icon">🧠</span>
               <div>
                 <h3>Relatório Cognitivo da IA</h3>
-                <p>Resultado estruturado gerado em segundo plano</p>
+                <p>Resultado gerado assincronamente por IA</p>
               </div>
             </div>
             <div id="status-tag" class="status-tag status-idle">Aguardando Envio</div>
@@ -172,11 +301,27 @@
             <p>Preencha os dados no formulário ao lado ou selecione um preset para testar a qualificação em tempo real.</p>
           </div>
 
-          <!-- ESTADO DE PROCESSAMENTO (LOADING) -->
+          <!-- ESTADO DE PROCESSAMENTO (SKELETON LOADER + EKG PULSE) -->
           <div id="loading-state" class="loading-state hidden">
-            <div class="loader-pulse"></div>
+            <div class="ekg-line-wrapper">
+              <svg class="ekg-svg" viewBox="0 0 300 80">
+                <path class="ekg-path" d="M 10 40 L 70 40 L 85 15 L 105 65 L 120 30 L 135 50 L 150 40 L 290 40" />
+              </svg>
+            </div>
             <h4>Analisando Lead com Gemini AI...</h4>
             <p id="loading-step">Validando dados e sinais de compra...</p>
+
+            <!-- SKELETON PLACEHOLDERS -->
+            <div class="skeleton-wrapper">
+              <div class="skeleton-box skeleton-header"></div>
+              <div class="skeleton-grid">
+                <div class="skeleton-box skeleton-small"></div>
+                <div class="skeleton-box skeleton-small"></div>
+                <div class="skeleton-box skeleton-small"></div>
+              </div>
+              <div class="skeleton-box skeleton-text"></div>
+              <div class="skeleton-box skeleton-text short"></div>
+            </div>
           </div>
 
           <!-- ESTADO DE RESULTADO (CARD DE QUALIFICAÇÃO) -->
@@ -191,6 +336,14 @@
                 <div class="fit-badge" id="res-fit">FIT: HIGH</div>
                 <div class="lead-name-meta" id="res-lead-name">Roberto Albuquerque</div>
                 <div class="lead-company-meta" id="res-lead-company">LogTech Brasil S/A</div>
+              </div>
+            </div>
+
+            <!-- ALERTA DE CANAL ATIVO (SLACK / WHATSAPP / CRM) -->
+            <div id="channel-alert-box" class="channel-alert-box">
+              <span class="channel-icon">🔔</span>
+              <div>
+                <strong>Alerta Multicanal Disparado:</strong> Notificação imediata despachada para o Slack <code>#leads-hot</code> e WhatsApp do Closer de plantão!
               </div>
             </div>
 
@@ -230,11 +383,21 @@
             <div class="report-action-box">
               <div class="action-icon">🎯</div>
               <div>
-                <div class="action-title">Ação Recomendada para o SDR / Closer:</div>
+                <div class="action-title">Ação Recomendada para o Closer:</div>
                 <div class="action-desc" id="res-action">
                   Priorizar contato telefônico e agendamento de call de demonstração nas próximas 2 horas.
                 </div>
               </div>
+            </div>
+
+            <!-- AÇÕES DE EXPORTAÇÃO -->
+            <div class="export-actions">
+              <a id="btn-export-html" href="#" target="_blank" class="btn btn-secondary btn-sm">
+                📄 Baixar Relatório HTML / PDF
+              </a>
+              <a id="btn-export-json" href="#" target="_blank" class="btn btn-secondary btn-sm">
+                📦 Exportar JSON
+              </a>
             </div>
           </div>
         </div>
@@ -260,12 +423,12 @@
         <div class="step-card">
           <div class="step-number">02</div>
           <h3>Processamento Cognitivo</h3>
-          <p>O Gemini 2.5 Flash extrai cargos, dores, urgência e autoridade do payload bruto sem travar a requisição original.</p>
+          <p>O Gemini 2.5 Flash extrai cargos, dores, urgência e autoridade do payload bruto em segundo plano sem travar o cliente.</p>
         </div>
         <div class="step-card">
           <div class="step-number">03</div>
           <h3>Roteamento Inteligente</h3>
-          <p>O score (0 a 100) e a qualificação são gravados no Turso DB no Edge, prontos para notificar seu CRM ou Slack em tempo real.</p>
+          <p>O score (0 a 100) e a qualificação são gravados no Turso DB no Edge, notificando Slack, WhatsApp ou CRM em milissegundos.</p>
         </div>
       </div>
     </div>

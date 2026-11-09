@@ -77,6 +77,126 @@ export class WebhookController {
       next(error);
     }
   }
+
+  /**
+   * Exporta a qualificação do lead em formato JSON ou Briefing HTML imprimível (PDF)
+   * GET /api/v1/webhooks/leads/:id/export?format=json|html
+   */
+  async exportLead(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const tenant = req.tenant;
+      if (!tenant) {
+        throw new UnauthorizedError("Tenant não identificado na requisição.");
+      }
+
+      const { id } = req.params;
+      const format = String(req.query.format || "html").toLowerCase();
+      const result = await webhookService.getLeadDetails(tenant, id);
+
+      const qual = result.qualification;
+      const lead = result.lead;
+
+      if (format === "json") {
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="leadpulse-report-${id}.json"`
+        );
+        res.status(200).json({
+          project: "LeadPulse AI",
+          exported_at: new Date().toISOString(),
+          tenant: { id: tenant.id, name: tenant.name },
+          lead,
+          qualification: qual,
+        });
+        return;
+      }
+
+      const isHot = qual && qual.score >= 80;
+      const isMid = qual && qual.score >= 50 && qual.score < 80;
+      const badgeClass = isHot ? "badge-hot" : isMid ? "badge-mid" : "badge-cold";
+      const scoreColor = isHot ? "#34D399" : isMid ? "#F59E0B" : "#EF4444";
+
+      const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório Executivo LeadPulse AI — ${lead.name || lead.company || id}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F172A; color: #F8FAFC; padding: 40px; margin: 0; line-height: 1.6; }
+    .container { max-width: 760px; margin: 0 auto; background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 36px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 20px; margin-bottom: 24px; }
+    .brand { font-size: 22px; font-weight: 800; color: #60A5FA; }
+    .badge { padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; text-transform: uppercase; }
+    .badge-hot { background: #10B981; color: #0F172A; }
+    .badge-mid { background: #F59E0B; color: #0F172A; }
+    .badge-cold { background: #EF4444; color: #FFFFFF; }
+    .score-box { background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 24px; }
+    .score-num { font-size: 48px; font-weight: 900; color: ${scoreColor}; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .info-card { background: #0F172A; border: 1px solid #334155; border-radius: 10px; padding: 14px; }
+    .label { font-size: 11px; text-transform: uppercase; color: #94A3B8; margin-bottom: 4px; }
+    .val { font-size: 15px; font-weight: 600; color: #FFFFFF; }
+    .section-title { font-size: 14px; font-weight: 700; color: #93C5FD; margin-bottom: 8px; text-transform: uppercase; }
+    .block { background: #0F172A; border: 1px solid #334155; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+    .footer { text-align: center; color: #64748B; font-size: 12px; margin-top: 30px; }
+    @media print { body { background: #FFF; color: #000; } .container { border: none; box-shadow: none; background: #FFF; } .block, .info-card { background: #F8FAFC; border-color: #E2E8F0; color: #000; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">⚡ LeadPulse AI — Relatório Cognitivo</div>
+      <div class="badge ${badgeClass}">Status: ${lead.status}</div>
+    </div>
+
+    <div class="score-box">
+      <div class="score-num">${qual ? qual.score : 0}<span style="font-size: 18px; color: #94A3B8;">/100</span></div>
+      <div>
+        <div style="font-size: 20px; font-weight: 700;">${lead.name || "Contato Comercial"}</div>
+        <div style="color: #94A3B8; font-size: 14px;">${lead.company || "Empresa sob consulta"} • ${lead.role || "Cargo não especificado"}</div>
+        <div style="margin-top: 6px; font-size: 13px; font-weight: 700; color: #34D399;">FIT: ${qual ? qual.fit_level : "UNQUALIFIED"}</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="info-card"><div class="label">E-mail</div><div class="val">${lead.email || "Não informado"}</div></div>
+      <div class="info-card"><div class="label">Telefone</div><div class="val">${lead.phone || "Não informado"}</div></div>
+      <div class="info-card"><div class="label">Urgência Detectada</div><div class="val">${qual ? qual.urgency_detected : "UNKNOWN"}</div></div>
+      <div class="info-card"><div class="label">Orçamento Estimado</div><div class="val">${qual ? qual.budget_detected : "UNKNOWN"}</div></div>
+    </div>
+
+    <div class="section-title">📋 Resumo Executivo para Vendas</div>
+    <div class="block">${qual ? qual.summary : "Sem resumo disponível."}</div>
+
+    <div class="section-title">🔍 Racional da Pontuação</div>
+    <div class="block" style="color: #CBD5E1;">${qual ? qual.reasoning : "Sem justificativa."}</div>
+
+    <div class="section-title">🎯 Ação Recomendada para o Closer</div>
+    <div class="block" style="border-color: #10B981; background: rgba(16, 185, 129, 0.08); font-weight: 600;">
+      ${qual ? qual.recommended_next_step : "Realizar triagem manual."}
+    </div>
+
+    <div class="footer">
+      Gerado automaticamente pelo LeadPulse AI em ${new Date().toLocaleString("pt-BR")} • Tenant: ${tenant.name} (${tenant.id})
+    </div>
+  </div>
+</body>
+</html>`;
+
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="leadpulse-report-${id}.html"`
+      );
+      res.status(200).send(html);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const webhookController = new WebhookController();

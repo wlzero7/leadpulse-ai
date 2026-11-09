@@ -29,4 +29,15 @@ router.get(
   (req, res, next) => webhookController.getLeadStatus(req, res, next)
 );
 
+/**
+ * @route   GET /api/v1/webhooks/leads/:id/export
+ * @desc    Exporta a qualificação do lead em formato JSON ou Briefing HTML imprimível (PDF)
+ * @access  Private (Requer cabeçalho 'X-API-Key')
+ */
+router.get(
+  "/leads/:id/export",
+  tenantAuthMiddleware,
+  (req, res, next) => webhookController.exportLead(req, res, next)
+);
+
 export const webhookRoutes: Router = router;

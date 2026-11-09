@@ -1,5 +1,5 @@
 /**
- * LeadPulse AI — Interactive Sandbox Client
+ * LeadPulse AI — Interactive Sandbox Client & Analytics Integration
  * Comunicação direta com a API REST Express + Turso DB + Gemini 2.5 Flash
  */
 
@@ -12,6 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusTag = document.getElementById("status-tag");
   const loadingStep = document.getElementById("loading-step");
   const presetButtons = document.querySelectorAll(".btn-preset");
+  const channelAlertBox = document.getElementById("channel-alert-box");
+  const btnExportHtml = document.getElementById("btn-export-html");
+  const btnExportJson = document.getElementById("btn-export-json");
 
   // Chave pública do Tenant de Demonstração (LeadPulse Demo Account)
   const DEMO_API_KEY = "lp_live_sample_key_1234567890abcdef";
@@ -50,6 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Carrega o preset inicial (hot)
   loadPreset("hot");
 
+  // Busca métricas reais do banco Turso
+  fetchLiveMetrics();
+
   // Gerenciamento de cliques nos presets
   presetButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -72,6 +78,36 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("message").value = data.message;
   }
 
+  // Busca métricas reais do banco Turso
+  async function fetchLiveMetrics() {
+    try {
+      const res = await fetch("/api/v1/analytics/summary", {
+        headers: { "X-API-Key": DEMO_API_KEY },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const m = json.data?.metrics;
+        if (m) {
+          const totalEl = document.getElementById("metric-total-leads");
+          const qualEl = document.getElementById("metric-qual-rate");
+          const scoreEl = document.getElementById("metric-avg-score");
+
+          if (totalEl && m.total_leads > 0) {
+            totalEl.textContent = `${m.total_leads} Leads`;
+          }
+          if (qualEl && m.qualification_rate) {
+            qualEl.textContent = m.qualification_rate;
+          }
+          if (scoreEl && m.average_score > 0) {
+            scoreEl.textContent = `${m.average_score} pts`;
+          }
+        }
+      }
+    } catch {
+      // Mantém os valores default
+    }
+  }
+
   // Manipulador de submissão do formulário
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -90,11 +126,11 @@ document.addEventListener("DOMContentLoaded", () => {
       },
     };
 
-    // 1. Transição de UI para carregamento
+    // 1. Transição de UI para carregamento com Skeleton Loader
     setLoadingState(true);
 
     try {
-      updateLoadingStep("Enviando webhook para POST /api/v1/webhooks/ingest...");
+      updateLoadingStep("Enviando webhook seguro para POST /api/v1/webhooks/ingest...");
 
       // 2. Dispara a ingestão no backend
       const ingestRes = await fetch("/api/v1/webhooks/ingest", {
@@ -113,11 +149,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const leadId = ingestData.data.lead_id;
-      updateLoadingStep("Lead registrado no Turso DB! Processando com IA cognitiva...");
+      updateLoadingStep("Lead registrado no Turso DB! Analisando semântica e sinais de compra...");
 
-      // 3. Polling em tempo real para aguardar a qualificação da IA
+      // 3. Polling reativo em tempo real para aguardar a IA
       let attempts = 0;
-      const maxAttempts = 20; // até 10 segundos
+      const maxAttempts = 20; // até 10s
       let qualificationData = null;
 
       while (attempts < maxAttempts) {
@@ -151,6 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // 4. Renderiza o relatório completo na tela
       renderReport(qualificationData.lead, qualificationData.qualification);
+      fetchLiveMetrics();
     } catch (error) {
       console.error("Erro na qualificação:", error);
       alert(`Erro ao analisar lead: ${error.message}`);
@@ -198,19 +235,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     scoreEl.textContent = qual.score;
 
-    // Cores de acordo com o score
+    // Cores e Badges
     if (qual.score >= 80) {
       scoreEl.style.color = "#34D399";
       fitEl.style.background = "#10B981";
       fitEl.style.color = "#0F172A";
+      if (channelAlertBox) channelAlertBox.style.display = "flex";
     } else if (qual.score >= 50) {
       scoreEl.style.color = "#F59E0B";
       fitEl.style.background = "#F59E0B";
       fitEl.style.color = "#0F172A";
+      if (channelAlertBox) channelAlertBox.style.display = "none";
     } else {
       scoreEl.style.color = "#EF4444";
       fitEl.style.background = "#EF4444";
       fitEl.style.color = "#FFFFFF";
+      if (channelAlertBox) channelAlertBox.style.display = "none";
     }
 
     fitEl.textContent = `FIT: ${qual.fit_level}`;
@@ -227,5 +267,13 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("res-summary").textContent = qual.summary;
     document.getElementById("res-reasoning").textContent = qual.reasoning;
     document.getElementById("res-action").textContent = qual.recommended_next_step;
+
+    // Links de Exportação
+    if (btnExportHtml) {
+      btnExportHtml.href = `/api/v1/webhooks/leads/${lead.id}/export?format=html`;
+    }
+    if (btnExportJson) {
+      btnExportJson.href = `/api/v1/webhooks/leads/${lead.id}/export?format=json`;
+    }
   }
 });
