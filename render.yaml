@@ -1,13 +1,13 @@
 services:
   - type: web
     name: leadpulse-ai-backend
-    runtime: node
+    runtime: docker
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
         value: production
