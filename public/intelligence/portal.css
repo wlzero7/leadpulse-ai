@@ -36,3 +36,9 @@
 
 .portal section.stack { margin-top: 18px; }
 .portal .panel > details { margin-top: 12px; }
+
+.portal .governance-row { flex-wrap: wrap; align-items: flex-start; }
+.portal .governance-controls { min-width: 0; max-width: 100%; }
+.portal .governance-controls form { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 7px; }
+.portal .governance-controls .field { max-width: 100%; }
+.portal .governance-controls .button { min-height: 36px; }

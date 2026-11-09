@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { isIP } from "node:net";
+import type { Transaction } from "@libsql/client";
 import type { Request, RequestHandler, Response } from "express";
 import { db } from "../config/database.js";
 import { env } from "../config/env.js";
@@ -59,6 +60,17 @@ export function limitByAddress(scope: string, maximum: number, seconds: number):
   };
 }
 
+export async function portalWrite<T>(work: (tx: Transaction) => Promise<T>): Promise<T> {
+  const tx = await db.transaction("write");
+  try {
+    const result = await work(tx);
+    await tx.commit();
+    return result;
+  } finally {
+    tx.close();
+  }
+}
+
 export function maintainPortal() {
   // Do not keep an instance awake. Startup also runs the sweep after scale-to-zero.
   const sweep = () => {
@@ -66,7 +78,11 @@ export function maintainPortal() {
     void db.batch([
       "DELETE FROM intelligence_demo_leads WHERE created_at < datetime('now', '-7 days')",
       { sql: "DELETE FROM portal_sessions WHERE expires_at <= ?", args: [now] },
-      { sql: "DELETE FROM portal_invites WHERE expires_at <= ?", args: [now] },
+      { sql: "DELETE FROM portal_invites WHERE expires_at <= ?", args: [now - 30 * 86400000] },
+      "DELETE FROM portal_invite_ids WHERE NOT EXISTS (SELECT 1 FROM portal_invites i WHERE i.token_hash = portal_invite_ids.token_hash)",
+      { sql: "DELETE FROM portal_email_verifications WHERE expires_at <= ?", args: [now] },
+      { sql: "DELETE FROM portal_access_revocations WHERE revoked_at <= ?", args: [now - 12 * 3600000] },
+      { sql: "DELETE FROM portal_audit WHERE at < ?", args: [now - env.PORTAL_AUDIT_RETENTION_DAYS * 86400000] },
       { sql: "DELETE FROM portal_resets WHERE expires_at <= ?", args: [now] },
       { sql: "DELETE FROM portal_rate_limits WHERE expires_at <= ?", args: [Math.floor(now / 1000)] },
     ], "write").catch(() => console.warn("[Portal] Limpeza periódica adiada."));

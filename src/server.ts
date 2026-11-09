@@ -15,10 +15,11 @@ async function ensureDatabaseReady(): Promise<void> {
     `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (
       'tenants', 'leads', 'qualifications', 'intelligence_demo_leads',
       'portal_accounts', 'portal_agencies', 'portal_agency_members', 'portal_clients', 'portal_client_members',
-      'portal_sessions', 'portal_invites', 'portal_resets', 'portal_opportunities', 'portal_rate_limits'
+      'portal_sessions', 'portal_invites', 'portal_resets', 'portal_opportunities', 'portal_rate_limits',
+      'portal_verified_emails', 'portal_email_verifications', 'portal_invite_ids', 'portal_audit', 'portal_access_revocations'
     )`
   );
-  if (tableCheck.rows.length !== 14) {
+  if (tableCheck.rows.length !== 19) {
     const schemaPath = path.resolve(process.cwd(), "db", "schema.sql");
     await db.executeMultiple(fs.readFileSync(schemaPath, "utf-8"));
     console.log("[Database] Schema SQL aplicado com sucesso.");

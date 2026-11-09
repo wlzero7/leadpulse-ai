@@ -8,8 +8,11 @@ const logoutButton = document.getElementById("logout");
 const stageLabels = { NEW: "Novos", CONTACTED: "Em contato", PROPOSAL: "Proposta", WON: "Ganhos", LOST: "Perdidos" };
 const roles = { OWNER: "Titular", ADMIN: "Administrador", EDITOR: "Editor", VIEWER: "Leitura" };
 let workspaces;
-let invite = new URLSearchParams(location.hash.slice(1)).get("invite");
-if (invite) history.replaceState(null, "", location.pathname + location.search);
+const incoming = new URLSearchParams(location.hash.slice(1));
+let invite = incoming.get("invite");
+let verification = incoming.get("verify");
+const emailReset = incoming.get("reset");
+if (invite || verification || emailReset) history.replaceState(null, "", location.pathname + location.search);
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -171,15 +174,42 @@ function setIdentity(value) {
 
 async function loadWorkspaces() {
   setIdentity(await request("/workspaces"));
+  if (verification) {
+    const token = verification;
+    verification = null;
+    try {
+      await request("/auth/verification/confirm", "POST", { token });
+      setIdentity(await request("/workspaces"));
+      message(statusLine, "E-mail confirmado.");
+    } catch (error) {
+      message(errorLine, error.message);
+    }
+  }
   if (invite) renderAccess("invite");
+  else if (!workspaces.account.verified) renderVerification();
   else renderWorkspaces();
 }
 
+function renderVerification() {
+  const available = workspaces.mailAvailable;
+  const card = panel("Confirmação pendente", available
+    ? "Envie um link de uso único para " + workspaces.account.email + ". O link expira em 30 minutos."
+    : "O envio de e-mail ainda não está configurado neste ambiente. Seu cadastro e a recuperação por código continuam disponíveis.");
+  if (available) card.append(actions(button("Enviar confirmação", () => run(async () => {
+    await request("/auth/verification/request", "POST", {});
+    message(statusLine, "Solicitação recebida. Confira sua caixa de entrada.");
+  }), "primary")));
+  const demo = node("a", "Abrir demonstração pública", "button secondary");
+  demo.href = "/intelligence/";
+  card.append(actions(demo));
+  display(heading("Confirme seu e-mail", "A confirmação é necessária para acessar dados da agência e de clientes."), card);
+}
+
 function renderAccess(mode, resetToken) {
-  const titles = { login: "Entrar", register: "Cadastrar agência", recovery: "Recuperar acesso", reset: "Criar nova senha", invite: "Aceitar convite" };
+  const titles = { login: "Entrar", register: "Cadastrar agência", recovery: "Recuperar acesso", emailRecovery: "Recuperar por e-mail", reset: "Criar nova senha", invite: "Aceitar convite" };
   const card = panel(titles[mode], mode === "invite"
     ? (workspaces ? "Confirme o convite para a conta em uso." : "Defina sua senha para a conta convidada. Se ela já existe, entre primeiro.")
-    : "Use seu acesso para trabalhar no portal.");
+    : (verification && mode === "login" ? "Entre na conta para concluir a confirmação do endereço." : "Use seu acesso para trabalhar no portal."));
   if (mode === "login") {
     card.append(form([email(), password("Senha", false)], "Entrar", async (data) => {
       await request("/auth/login", "POST", data);
@@ -196,6 +226,14 @@ function renderAccess(mode, resetToken) {
     card.append(form([email(), field("recoveryCode", "Código salvo no cadastro", { min: 64, max: 64, autocomplete: "off" })], "Validar código", async (data) => {
       const { resetToken: temporary } = await request("/auth/recovery", "POST", data);
       renderAccess("reset", temporary);
+    }));
+  }
+  if (mode === "emailRecovery") {
+    card.append(form([email()], "Solicitar link", async (data) => {
+      const response = await request("/auth/recovery/email", "POST", data);
+      message(statusLine, response.available
+        ? "Se a conta tiver um endereço confirmado, você receberá instruções."
+        : "Envio de e-mail indisponível. Use seu código de recuperação.");
     }));
   }
   if (mode === "reset") {
@@ -220,6 +258,7 @@ function renderAccess(mode, resetToken) {
     if (mode !== "login") links.push(button("Entrar", () => renderAccess("login")));
     if (mode !== "register" && !invite) links.push(button("Cadastrar agência", () => renderAccess("register")));
     if (mode !== "recovery") links.push(button("Recuperar acesso", () => renderAccess("recovery")));
+    if (mode === "recovery") links.push(button("Recuperar por e-mail", () => renderAccess("emailRecovery")));
     if (invite && mode !== "invite") links.push(button("Voltar ao convite", () => renderAccess("invite")));
     card.append(actions(...links));
   }
@@ -300,7 +339,110 @@ async function renderAgency(id, editing) {
   sidebar.append(editor, invites);
   const grid = node("div", undefined, "identity-grid");
   grid.append(clients, sidebar);
-  display(heading(agency.name, "Overview da agência · " + roles[agency.role]), grid);
+  const title = heading(agency.name, "Overview da agência · " + roles[agency.role]);
+  title.append(actions(button("Administrar acessos", () => run(() => renderGovernance(id)))));
+  display(title, grid);
+}
+
+const eventLabels = {
+  "agency.created": "Agência criada",
+  "session.login": "Entrada na conta",
+  "session.logout": "Saída da conta",
+  "sessions.revoked": "Sessões encerradas",
+  "account.email_verified": "E-mail confirmado",
+  "account.password_changed": "Senha alterada",
+  "permission.changed": "Permissão alterada",
+  "member.removed": "Acesso removido",
+  "invite.issued": "Convite emitido",
+  "invite.accepted": "Convite aceito",
+  "invite.revoked": "Convite revogado",
+  "opportunity.stage_changed": "Etapa da oportunidade alterada",
+  "opportunity.outcome_updated": "Resultado comercial registrado",
+  "client.created": "Cliente cadastrado",
+  "client.settings_updated": "Configuração do cliente alterada",
+};
+const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+async function renderGovernance(agencyId) {
+  const path = agencyPath(agencyId) + "/access";
+  const data = await request(path);
+  const title = heading("Administração de acessos", data.name + " · usuários, convites e trilha de auditoria.");
+  title.append(actions(button("Voltar à agência", () => run(() => renderAgency(agencyId)))));
+  const members = panel("Usuários e papéis", "Mudanças de papel encerram as sessões atuais neste vínculo.");
+  const memberList = node("div", undefined, "workspace-list");
+  for (const member of data.members) {
+    const row = node("article", undefined, "workspace-card governance-row");
+    const name = node("div");
+    name.append(node("strong", member.name), node("p", member.email),
+      node("p", (member.client ?? "Agência") + " · " + roles[member.role]));
+    row.append(name);
+    if (data.role === "OWNER" || !member.privileged) {
+      const clientId = member.clientId ?? undefined;
+      const update = async (operation, role) => {
+        await request(path + "/members/" + encodeURIComponent(member.id), "POST", { operation, clientId, role });
+        if (member.id === workspaces.account.id) await loadWorkspaces();
+        else await renderGovernance(agencyId);
+        message(statusLine, "Acesso atualizado.");
+      };
+      const choices = clientId ? [["EDITOR", roles.EDITOR], ["VIEWER", roles.VIEWER]]
+        : [["OWNER", roles.OWNER], ["ADMIN", roles.ADMIN]];
+      const controls = node("div", undefined, "governance-controls");
+      controls.append(form([field("role", "Papel de " + member.name, { choices, value: member.role })],
+        "Salvar papel", ({ role }) => update("role", role)));
+      controls.append(actions(
+        button("Encerrar sessões", () => {
+          if (window.confirm("Encerrar as sessões atuais neste vínculo? A pessoa poderá entrar novamente se ainda tiver permissão.")) run(() => update("sessions"));
+        }),
+        button("Remover acesso", () => {
+          if (window.confirm("Remover o acesso a " + (member.client ?? "esta agência e seus clientes") + "?")) run(() => update("remove"));
+        }),
+      ));
+      row.append(controls);
+    }
+    memberList.append(row);
+  }
+  members.append(memberList);
+
+  const invites = panel("Convites", "Convites pendentes e expirados recentemente.");
+  const inviteList = node("div", undefined, "workspace-list");
+  for (const invitation of data.invites) {
+    const row = node("article", undefined, "workspace-card governance-row");
+    const info = node("div");
+    const expires = dateTime.format(new Date(invitation.expiresAt));
+    info.append(node("strong", invitation.email),
+      node("p", (invitation.client ?? "Agência") + " · " + roles[invitation.role]),
+      node("p", (invitation.status === "EXPIRED" ? "Expirado em " : "Pendente até ") + expires));
+    row.append(info);
+    if (invitation.status === "PENDING" && (invitation.role !== "ADMIN" || data.role === "OWNER")) {
+      row.append(button("Revogar convite", () => {
+        if (window.confirm("Revogar este convite de uso único?")) run(async () => {
+          await request(path + "/invites/" + encodeURIComponent(invitation.id) + "/revoke", "POST", {});
+          await renderGovernance(agencyId);
+          message(statusLine, "Convite revogado.");
+        });
+      }));
+    }
+    inviteList.append(row);
+  }
+  if (!inviteList.childElementCount) inviteList.append(node("p", "Nenhum convite pendente ou expirado.", "empty"));
+  invites.append(inviteList);
+
+  const activity = panel("Auditoria", "Eventos recentes desta agência. O registro omite senhas, tokens e conteúdo comercial.");
+  activity.classList.add("stack");
+  const events = node("div", undefined, "workspace-list");
+  for (const event of data.events) {
+    const row = node("article", undefined, "workspace-card governance-row");
+    const info = node("div");
+    info.append(node("strong", eventLabels[event.event] ?? event.event),
+      node("p", [dateTime.format(new Date(event.at)), event.actor ?? event.actorId, event.client ?? "Agência", event.detail].filter(Boolean).join(" · ")));
+    row.append(info);
+    events.append(row);
+  }
+  if (!events.childElementCount) events.append(node("p", "Nenhum evento disponível.", "empty"));
+  activity.append(events);
+  const grid = node("div", undefined, "identity-grid");
+  grid.append(members, invites);
+  display(title, grid, activity);
 }
 
 async function renderClient(agencyId, clientId) {
@@ -371,6 +513,10 @@ logoutButton.addEventListener("click", () => run(async () => {
 }));
 
 run(async () => {
+  if (emailReset) {
+    renderAccess("reset", emailReset);
+    return;
+  }
   try {
     await loadWorkspaces();
   } catch (error) {

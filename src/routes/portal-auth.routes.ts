@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
+import type { Transaction } from "@libsql/client";
 import argon2 from "argon2";
 import { Router, type Request, type RequestHandler, type Response } from "express";
 import { z } from "zod";
 import { db } from "../config/database.js";
-import { browserRequests, cookieValue, digest, limit, limitByAddress, secret, secureCookie, tokenPattern } from "../middlewares/portal-security.js";
+import { browserRequests, cookieValue, digest, limit, limitByAddress, portalWrite, secret, secureCookie, tokenPattern } from "../middlewares/portal-security.js";
+import { audit, auditIdentity } from "../services/portal-audit.js";
 import { BadRequestError, ConflictError, UnauthorizedError } from "../utils/errors.js";
 
 export const emailInput = z.string().trim().max(254).toLowerCase().pipe(z.email());
@@ -34,20 +36,25 @@ function sessionHash(req: Request) {
   return value && tokenPattern.test(value) ? digest(value) : null;
 }
 
-export async function account(req: Request) {
+export async function account(req: Request, executor: Pick<Transaction, "execute"> = db) {
   const hash = sessionHash(req);
   if (!hash) return null;
-  const { rows } = await db.execute({
-    sql: `SELECT a.id, a.email, a.name FROM portal_sessions s JOIN portal_accounts a ON a.id = s.account_id
+  const { rows } = await executor.execute({
+    sql: `SELECT a.id, a.email, a.name, s.expires_at, v.account_id AS verified
+      FROM portal_sessions s JOIN portal_accounts a ON a.id = s.account_id
+      LEFT JOIN portal_verified_emails v ON v.account_id = a.id AND v.email = a.email
       WHERE s.token_hash = ? AND s.expires_at > ?`,
     args: [hash, Date.now()],
   });
   const row = rows[0];
-  return row ? { id: String(row.id), email: String(row.email), name: String(row.name) } : null;
+  return row ? {
+    id: String(row.id), email: String(row.email), name: String(row.name),
+    verified: row.verified !== null, issuedAt: Number(row.expires_at) - twelveHours,
+  } : null;
 }
 
-export async function requireAccount(req: Request) {
-  const identity = await account(req);
+export async function requireAccount(req: Request, executor: Pick<Transaction, "execute"> = db) {
+  const identity = await account(req, executor);
   if (!identity) throw new UnauthorizedError("Entre para acessar o workspace.");
   return identity;
 }
@@ -55,13 +62,16 @@ export async function requireAccount(req: Request) {
 async function startSession(req: Request, res: Response, accountId: string, passwordHash: string) {
   const value = secret();
   const old = sessionHash(req);
-  const result = await db.batch([
-    { sql: "DELETE FROM portal_sessions WHERE token_hash = ?", args: [old] },
-    { sql: `INSERT INTO portal_sessions (token_hash, account_id, expires_at)
-      SELECT ?, id, ? FROM portal_accounts WHERE id = ? AND password_hash = ?`,
-      args: [digest(value), Date.now() + twelveHours, accountId, passwordHash] },
-  ], "write");
-  if (!result[1].rowsAffected) throw new UnauthorizedError("Entre novamente para continuar.");
+  await portalWrite(async (tx) => {
+    const result = await tx.batch([
+      { sql: "DELETE FROM portal_sessions WHERE token_hash = ?", args: [old] },
+      { sql: `INSERT INTO portal_sessions (token_hash, account_id, expires_at)
+        SELECT ?, id, ? FROM portal_accounts WHERE id = ? AND password_hash = ?`,
+        args: [digest(value), Date.now() + twelveHours, accountId, passwordHash] },
+    ]);
+    if (!result[1].rowsAffected) throw new UnauthorizedError("Entre novamente para continuar.");
+    await auditIdentity(tx, "session.login", accountId);
+  });
   res.cookie(cookie, value, { ...cookieOptions, maxAge: twelveHours });
 }
 
@@ -73,7 +83,10 @@ const inviteInput = z.object({ token, name: personInput.optional(), password: ne
 export const portalAuth: Router = Router();
 portalAuth.use(browserRequests);
 
-portalAuth.get("/me", handle(async (req, res) => res.json(await requireAccount(req))));
+portalAuth.get("/me", handle(async (req, res) => {
+  const { issuedAt: _, ...identity } = await requireAccount(req);
+  res.json(identity);
+}));
 
 portalAuth.post("/register", limitByAddress("register", 12, 3600), handle(async (req, res) => {
   const input = body(registerInput, req);
@@ -92,6 +105,7 @@ portalAuth.post("/register", limitByAddress("register", 12, 3600), handle(async 
       { sql: "INSERT INTO portal_agencies VALUES (?, ?)", args: [agencyId, input.agency] },
       { sql: "INSERT INTO portal_agency_members VALUES (?, ?, 'OWNER')", args: [agencyId, id] },
     ]);
+    await audit(tx, "agency.created", id, agencyId);
     await tx.commit();
   } finally {
     tx.close();
@@ -115,19 +129,29 @@ portalAuth.post("/login", limitByAddress("login-ip", 30, 900), handle(async (req
 
 portalAuth.post("/logout", handle(async (req, res) => {
   const hash = sessionHash(req);
-  if (hash) await db.execute({ sql: "DELETE FROM portal_sessions WHERE token_hash = ?", args: [hash] });
+  if (hash) await portalWrite(async (tx) => {
+    const identity = await account(req, tx);
+    await tx.execute({ sql: "DELETE FROM portal_sessions WHERE token_hash = ?", args: [hash] });
+    if (identity) await auditIdentity(tx, "session.logout", identity.id);
+  });
   res.clearCookie(cookie, cookieOptions).status(204).end();
 }));
 
 portalAuth.post("/recovery", limitByAddress("recovery", 12, 900), handle(async (req, res) => {
   const input = body(recoveryInput, req);
   const resetToken = secret();
-  const inserted = await db.execute({
-    sql: `INSERT INTO portal_resets (token_hash, account_id, recovery_hash, expires_at)
-      SELECT ?, id, recovery_hash, ? FROM portal_accounts WHERE email = ? AND recovery_hash = ?`,
-    args: [digest(resetToken), Date.now() + 15 * 60 * 1000, input.email, digest(input.recoveryCode)],
+  await portalWrite(async (tx) => {
+    const { rows } = await tx.execute({
+      sql: "SELECT id, recovery_hash FROM portal_accounts WHERE email = ? AND recovery_hash = ?",
+      args: [input.email, digest(input.recoveryCode)],
+    });
+    if (!rows.length) throw new BadRequestError("Não foi possível validar o código de recuperação.");
+    await tx.batch([
+      { sql: "DELETE FROM portal_resets WHERE account_id = ?", args: [rows[0].id] },
+      { sql: "INSERT INTO portal_resets (token_hash, account_id, recovery_hash, expires_at) VALUES (?, ?, ?, ?)",
+        args: [digest(resetToken), rows[0].id, rows[0].recovery_hash, Date.now() + 15 * 60 * 1000] },
+    ]);
   });
-  if (!inserted.rowsAffected) throw new BadRequestError("Não foi possível validar o código de recuperação.");
   res.json({ resetToken });
 }));
 
@@ -150,6 +174,7 @@ portalAuth.post("/reset", limitByAddress("reset", 12, 900), handle(async (req, r
       { sql: "DELETE FROM portal_sessions WHERE account_id = ?", args: [id] },
       { sql: "DELETE FROM portal_resets WHERE account_id = ?", args: [id] },
     ]);
+    await auditIdentity(tx, "account.password_changed", id);
     await tx.commit();
   } finally {
     tx.close();
@@ -160,7 +185,9 @@ portalAuth.post("/reset", limitByAddress("reset", 12, 900), handle(async (req, r
 portalAuth.post("/accept", limitByAddress("accept", 20, 900), handle(async (req, res) => {
   const input = body(inviteInput, req);
   const hash = digest(input.token);
-  const inviteQuery = "SELECT agency_id, client_id, email, role FROM portal_invites WHERE token_hash = ? AND expires_at > ?";
+  const inviteQuery = `SELECT i.agency_id, i.client_id, i.email, i.role, ids.id
+    FROM portal_invites i JOIN portal_invite_ids ids ON ids.token_hash = i.token_hash
+    WHERE i.token_hash = ? AND i.expires_at > ?`;
   const invalid = () => new BadRequestError("Convite inválido, expirado ou já utilizado.");
   const lookup = await db.execute({ sql: inviteQuery, args: [hash, Date.now()] });
   if (!lookup.rows.length) throw invalid();
@@ -178,6 +205,7 @@ portalAuth.post("/accept", limitByAddress("accept", 20, 900), handle(async (req,
     const { rows } = await tx.execute({ sql: inviteQuery, args: [hash, Date.now()] });
     const invite = rows[0];
     if (!invite) throw invalid();
+    if (identity && (await account(req, tx))?.id !== id) throw new UnauthorizedError("Entre novamente para aceitar o convite.");
     if (passwordHash && recoveryCode) {
       const created = await tx.execute({
         sql: "INSERT INTO portal_accounts VALUES (?, ?, ?, ?, ?) ON CONFLICT(email) DO NOTHING",
@@ -196,7 +224,12 @@ portalAuth.post("/accept", limitByAddress("accept", 20, 900), handle(async (req,
         args: [invite.agency_id, id],
       });
     }
-    await tx.execute({ sql: "DELETE FROM portal_invites WHERE token_hash = ?", args: [hash] });
+    await tx.batch([
+      { sql: "DELETE FROM portal_invite_ids WHERE token_hash = ?", args: [hash] },
+      { sql: "DELETE FROM portal_invites WHERE token_hash = ?", args: [hash] },
+    ]);
+    await audit(tx, "invite.accepted", id, String(invite.agency_id),
+      invite.client_id ? String(invite.client_id) : null, String(invite.id), String(invite.role));
     await tx.commit();
   } finally {
     tx.close();

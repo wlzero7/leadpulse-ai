@@ -4,6 +4,8 @@ import { analyticsRoutes } from "./analytics.routes.js";
 import { intelligenceRoutes } from "./intelligence.routes.js";
 import { portalAuth } from "./portal-auth.routes.js";
 import { portalRoutes } from "./portal.routes.js";
+import { emailRoutes } from "./portal-email.routes.js";
+import { governanceRoutes } from "./portal-governance.routes.js";
 import { db } from "../config/database.js";
 
 const router: Router = Router();
@@ -52,6 +54,8 @@ router.use("/api/v1/analytics", analyticsRoutes);
 router.use("/api/v1/intelligence/demo", intelligenceRoutes);
 
 router.use("/api/v1/portal/auth", portalAuth);
+router.use("/api/v1/portal/auth", emailRoutes);
+router.use("/api/v1/portal", governanceRoutes);
 router.use("/api/v1/portal", portalRoutes);
 
 export const appRoutes: Router = router;

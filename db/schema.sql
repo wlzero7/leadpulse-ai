@@ -163,3 +163,29 @@ CREATE INDEX IF NOT EXISTS idx_portal_session_account ON portal_sessions(account
 CREATE INDEX IF NOT EXISTS idx_portal_reset_account ON portal_resets(account_id);
 CREATE INDEX IF NOT EXISTS idx_portal_opportunity_client ON portal_opportunities(agency_id, client_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_demo_retention ON intelligence_demo_leads(created_at);
+
+-- Identity governance. Existing accounts need to confirm their current address.
+CREATE TABLE IF NOT EXISTS portal_verified_emails (
+    account_id TEXT PRIMARY KEY REFERENCES portal_accounts(id), email TEXT NOT NULL, verified_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS portal_email_verifications (
+    account_id TEXT PRIMARY KEY REFERENCES portal_accounts(id), email TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS portal_invite_ids (
+    id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE
+);
+INSERT OR IGNORE INTO portal_invite_ids (id, token_hash)
+SELECT lower(hex(randomblob(16))), token_hash FROM portal_invites;
+
+CREATE TABLE IF NOT EXISTS portal_audit (
+    id TEXT PRIMARY KEY, at INTEGER NOT NULL, event TEXT NOT NULL, actor_id TEXT NOT NULL,
+    agency_id TEXT NOT NULL, client_id TEXT, subject_id TEXT, detail TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_portal_audit_agency ON portal_audit(agency_id, at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_portal_audit_retention ON portal_audit(at);
+
+CREATE TABLE IF NOT EXISTS portal_access_revocations (
+    agency_id TEXT NOT NULL, scope TEXT NOT NULL, account_id TEXT NOT NULL, revoked_at INTEGER NOT NULL,
+    PRIMARY KEY (agency_id, scope, account_id)
+);

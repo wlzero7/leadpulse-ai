@@ -1,3 +1,4 @@
+import type { PortalMailer } from "./services/portal-mail.js";
 import path from "node:path";
 import express, { type Application } from "express";
 import cors from "cors";
@@ -7,8 +8,9 @@ import { appRoutes } from "./routes/index.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { NotFoundError } from "./utils/errors.js";
 
-export function createApp(): Application {
+export function createApp(mailer?: PortalMailer): Application {
   const app = express();
+  app.locals.portalMailer = mailer;
 
   // 1. Middlewares de Segurança e Conectividade
   app.use(
