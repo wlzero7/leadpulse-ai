@@ -15,6 +15,7 @@ const envSchema = z.object({
   WEBHOOK_SECRET: z
     .string()
     .default("whsec_7e4d51d20baebd17490a2e3b177f69f80d6c7c9389a83f92"),
+  GEMINI_MODEL: z.string().trim().min(1).default("gemini-3.1-flash-lite"),
   GEMINI_API_KEY: z.string().optional().default("mock_or_env"),
   OPENAI_API_KEY: z.string().optional().default(""),
   CORS_ORIGIN: z.string().default("*"),

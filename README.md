@@ -6,13 +6,13 @@
 
 ## 🏗️ Visão Geral da Arquitetura
 
-O **LeadPulse AI** foi desenvolvido com foco em custo zero na validação, alta escalabilidade e isolamento multi-tenant seguro. Integra um motor cognitivo baseado no **Google Gemini 2.5 Flash**, banco de dados no Edge via **Turso DB (LibSQL)** e uma **Landing Page B2B interativa** com sandbox funcional em tempo real.
+O **LeadPulse AI** foi desenvolvido com foco em custo zero na validação, alta escalabilidade e isolamento multi-tenant seguro. Integra um motor cognitivo baseado no **Google Gemini 3.1 Flash-Lite**, banco de dados no Edge via **Turso DB (LibSQL)** e uma **Landing Page B2B interativa** com sandbox funcional em tempo real.
 
 ### Stack Tecnológica
 * **Frontend:** HTML5 Semântico, CSS3 Moderno (Dark Theme), Vanilla JavaScript com polling reativo.
 * **Backend:** Node.js v20+ / v24, Express.js 4.22+ em TypeScript (`NodeNext`).
 * **Banco de Dados:** Turso DB (SQLite no Edge / LibSQL local).
-* **Motor Cognitivo (IA):** Google Gemini 2.5 Flash (`@google/genai` v3.0) com fallback heurístico.
+* **Motor Cognitivo (IA):** Google Gemini 3.1 Flash-Lite (`@google/genai` v3.0) com fallback heurístico.
 * **Segurança:** Helmet, CORS, Argon2, JWT com segredos criptográficos de 64 caracteres.
 * **Deploy Cloud:** Render (Web Service Node.js / Docker) e Turso Cloud.
 
@@ -56,7 +56,7 @@ leadpulse-ai/
 │   ├── schemas/
 │   │   └── webhook.schema.ts      # Schema Zod para leads brutos
 │   ├── services/
-│   │   ├── ai.service.ts          # Orquestrador Gemini 2.5 Flash
+│   │   ├── ai.service.ts          # Orquestrador Gemini 3.1 Flash-Lite
 │   │   └── webhook.service.ts     # Ingestão e disparo em background
 │   ├── types/
 │   │   └── index.ts               # Tipagens TypeScript compartilhadas
@@ -101,6 +101,10 @@ npm run build
 npm start
 ```
 
+O sandbox público usa um tenant de demonstração. Em produção, o analytics desse tenant retorna métricas agregadas com a lista de leads recentes vazia. Use um tenant privado para leads reais.
+
+O comando `pnpm run test:ingest` executa testes HTTP com SQLite em memória e respostas Gemini simuladas. Ele pode ser executado sem credenciais e sem um servidor já ativo.
+
 Acesse no navegador: **[http://localhost:3000](http://localhost:3000)**
 
 ---
@@ -124,4 +128,5 @@ Acesse no navegador: **[http://localhost:3000](http://localhost:3000)**
 4. No painel de variáveis de ambiente do Render, configure:
    - `TURSO_DATABASE_URL`: `libsql://leadpulse-production-...turso.io`
    - `TURSO_AUTH_TOKEN`: `seu_token_do_turso`
-   - `GEMINI_API_KEY`: `sua_chave_do_google_gemini`
+   - `GEMINI_API_KEY`: chave do projeto Google Gemini.
+   - `GEMINI_MODEL` (opcional): modelo liberado para essa chave. O padrão é `gemini-3.1-flash-lite`.

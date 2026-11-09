@@ -16,11 +16,11 @@ export const leadIngestSchema = z
     role: z.string().optional(),
     message: z.string().optional(),
     // Dados customizados adicionais
-    custom_fields: z.record(z.unknown()).optional(),
+    custom_fields: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough()
   .refine(
-    (data) => Boolean(data.email || data.phone || data.message || data.name),
+    (data) => [data.email, data.phone, data.message, data.name].some((value) => value?.trim()),
     {
       message: "O payload deve conter pelo menos um identificador de contato (email, telefone) ou mensagem/nome.",
       path: ["email"],

@@ -49,20 +49,15 @@ export class WebhookService {
       score: null,
     });
 
-    console.log(
-      `📥 [Webhook] Novo lead [${createdLead.id}] gravado com sucesso para o tenant '${tenant.name}' (${tenant.id}).`
-    );
+    console.log(`[Webhook] Lead [${createdLead.id}] gravado.`);
 
     // 2. DISPARO ASSÍNCRONO DA QUALIFICAÇÃO COGNITIVA POR IA (SPRINT 2)
     // O endpoint não trava a resposta para o remetente do webhook; a IA processa em segundo plano.
     setImmediate(async () => {
       try {
         await aiService.qualifyLead(tenant, createdLead);
-      } catch (err) {
-        console.error(
-          `💥 [Webhook Background] Erro ao qualificar o lead [${createdLead.id}]:`,
-          err
-        );
+      } catch {
+        console.error(`[Webhook] Processamento em segundo plano falhou para o lead [${createdLead.id}].`);
       }
     });
 

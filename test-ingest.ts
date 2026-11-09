@@ -1,151 +1,162 @@
-import { db } from "./src/config/database.js";
-import { env } from "./src/config/env.js";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { once } from "node:events";
+import { readFileSync } from "node:fs";
+import type { AddressInfo } from "node:net";
+import { setTimeout as delay } from "node:timers/promises";
 
-async function runEndToEndTest() {
-  console.log("==================================================================");
-  console.log("🚀 [LeadPulse AI] Validação Completa (Branding + Ingestão + IA)");
-  console.log("==================================================================\n");
+// Independent of the .env file and of any server already running.
+process.env.NODE_ENV = "production";
+process.env.TURSO_DATABASE_URL = "file::memory:";
+process.env.TURSO_AUTH_TOKEN = "";
+process.env.GEMINI_API_KEY = "synthetic-test-key";
+process.env.GEMINI_MODEL = "gemini-test";
 
-  const baseUrl = `http://localhost:${env.PORT}`;
-  const apiKey = "lp_live_sample_key_1234567890abcdef";
-  let serverInstance: any = null;
+const originalFetch = globalThis.fetch;
+const injectedMarker = "<script>SPRINT01</script>";
+let providerMode: "ok" | "unavailable" | "invalid" = "ok";
 
-  // 0. Verifica se o servidor já está ativo, senão inicializa uma instância
-  try {
-    const healthCheck = await fetch(`${baseUrl}/health`);
-    if (healthCheck.ok) {
-      console.log(`🌐 Servidor ativo detectado em ${baseUrl}.`);
-    }
-  } catch {
-    console.log(`ℹ️ Inicializando servidor HTTP local na porta ${env.PORT} para execução dos testes...`);
-    const { createApp } = await import("./src/app.js");
-    const app = createApp();
-    await new Promise<void>((resolve) => {
-      serverInstance = app.listen(env.PORT, () => {
-        console.log(`🚀 [Test Server] Servidor operacional em http://localhost:${env.PORT}\n`);
-        resolve();
-      });
+globalThis.fetch = async (input, init) => {
+  const request = new Request(input, init);
+  const { hostname } = new URL(request.url);
+  if (hostname === "127.0.0.1") return originalFetch(request);
+  assert.equal(hostname, "generativelanguage.googleapis.com");
+  if (providerMode === "unavailable") {
+    return Response.json({ error: { code: 503, status: "UNAVAILABLE", message: "Simulated outage" } }, { status: 503 });
+  }
+  const result = {
+    score: providerMode === "ok" ? 87 : 101,
+    fit_level: "HIGH",
+    summary: injectedMarker,
+    reasoning: "Simulated Gemini result",
+    budget_detected: "UNKNOWN",
+    urgency_detected: "HIGH",
+    recommended_next_step: "Synthetic test only",
+  };
+  return Response.json({
+    candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify(result) }] } }],
+  });
+};
+
+async function run() {
+  const { createApp } = await import("./src/app.js");
+  const { db } = await import("./src/config/database.js");
+  await db.executeMultiple(readFileSync(new URL("./db/schema.sql", import.meta.url), "utf8"));
+  const demo = randomUUID();
+  const second = randomUUID();
+  const suspended = randomUUID();
+  for (const [id, apiKey, status] of [
+    ["tenant_demo_01", demo, "ACTIVE"], ["private-tenant", second, "ACTIVE"], ["suspended", suspended, "SUSPENDED"],
+  ]) {
+    await db.execute({
+      sql: "INSERT INTO tenants (id, name, slug, api_key, status) VALUES (?, ?, ?, ?, ?)",
+      args: [id, id, id, apiKey, status],
     });
   }
 
+  const server = createApp().listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const base = "http://127.0.0.1:" + (server.address() as AddressInfo).port;
+  const analytics = "/api/v1/analytics/summary";
+  const ingestPath = "/api/v1/webhooks/ingest";
+  const auth = (key: string) => ({ "X-API-Key": key });
+
+  async function request(path: string, expected: number, options?: RequestInit) {
+    const response = await fetch(base + path, { ...options, signal: AbortSignal.timeout(5000) });
+    assert.equal(response.status, expected, path);
+    return response;
+  }
+
+  function ingest(body: string, expected: number, key = demo, contentType = "application/json") {
+    return request(ingestPath, expected, {
+      method: "POST", headers: { ...auth(key), "Content-Type": contentType }, body,
+    });
+  }
+
+  async function waitForLead(leadPath: string, key: string) {
+    for (let i = 0; i < 60; i++) {
+      const { data } = await (await request(leadPath, 200, { headers: auth(key) })).json();
+      if (data.lead.status !== "NEW" && data.lead.status !== "PROCESSING") return data;
+      await delay(50);
+    }
+    assert.fail("Lead processing did not finish");
+  }
+
   try {
-    // 1. Validação dos Assets de Branding e Arquivos Estáticos
-    console.log("🎨 1. Validando Assets de Marca e Endpoints Públicos:");
-    
-    const brandRes = await fetch(`${baseUrl}/api/v1/brand`);
-    console.log(`   - GET /api/v1/brand: Status ${brandRes.status} (OK: ${brandRes.ok})`);
+    await request("/", 200);
+    for (const path of ["/api/v1/brand", "/assets/logo.svg", "/assets/logo.png", "/favicon.ico"]) {
+      await request(path, 200);
+    }
+    const health = await (await request("/health", 200)).json();
+    assert.equal(health.status, "ok");
+    assert.equal(health.database, "UP");
+    console.log("OK landing, branding assets and healthy database");
 
-    const logoSvgRes = await fetch(`${baseUrl}/assets/logo.svg`);
-    console.log(`   - GET /assets/logo.svg: Status ${logoSvgRes.status} (OK: ${logoSvgRes.ok})`);
+    await request(analytics, 401);
+    await request(analytics, 401, { headers: auth("invalid") });
+    await request(analytics, 403, { headers: auth(suspended) });
+    await request(analytics, 200, { headers: { Authorization: "Bearer " + second } });
+    await request(ingestPath, 401, { method: "POST" });
+    await ingest("{}", 400);
+    await ingest('{"email":"invalid"}', 400);
+    await ingest('{"name":"   "}', 400);
+    await ingest('{"name":"QA","custom_fields":[]}', 400);
+    const malformed = await (await ingest('{"name":', 400)).json();
+    assert.equal(malformed.error.statusCode, 400);
+    await ingest(JSON.stringify({ name: "QA", message: "x".repeat(2 * 1024 * 1024) }), 413);
+    console.log("OK missing/wrong/suspended credentials, Bearer, invalid inputs, malformed JSON and request limit");
 
-    const logoPngRes = await fetch(`${baseUrl}/assets/logo.png`);
-    console.log(`   - GET /assets/logo.png: Status ${logoPngRes.status} (OK: ${logoPngRes.ok})`);
-
-    const faviconRes = await fetch(`${baseUrl}/favicon.ico`);
-    console.log(`   - GET /favicon.ico: Status ${faviconRes.status} (OK: ${faviconRes.ok})`);
-
-    // 2. Ingestão de Lead via Webhook
-    const leadPayload = {
-      source: "TYPEFORM",
-      external_id: "lead_submission_prod_2026",
-      name: "Roberto Albuquerque",
-      email: "roberto.albuquerque@logtechbrasil.com.br",
-      phone: "+55 11 98765-4321",
-      company: "LogTech Brasil Soluções Logísticas S/A",
-      role: "Diretor Comercial e de Operações",
-      message: "Temos urgência imediata. Recebemos mais de 8.000 leads por mês e nossa equipe de pré-vendas não consegue qualificar a tempo. Temos orçamento corporativo aprovado de R$ 15.000/mês para implementar automação por IA agora.",
-      custom_fields: {
-        lead_volume: "8000+/mês",
-        crm_utilizado: "Salesforce Enterprise",
-        urgencia_implantacao: "imediata",
-        orcamento_aprovado: true,
-      },
-    };
-
-    console.log(`\n📡 2. Enviando lead via Webhook para: ${baseUrl}/api/v1/webhooks/ingest`);
-    console.log(`🔑 Cabeçalho X-API-Key: ${apiKey}`);
-
-    const response = await fetch(`${baseUrl}/api/v1/webhooks/ingest`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-      },
-      body: JSON.stringify(leadPayload),
+    const payload = JSON.stringify({
+      name: injectedMarker, email: "lead@example.test", custom_fields: { nested: [1, { valid: true }] },
     });
+    const { data: created } = await (await ingest(payload, 201)).json();
+    const leadPath = "/api/v1/webhooks/leads/" + created.lead_id;
+    await request(leadPath, 401);
+    await request(leadPath + "/export", 401);
+    await request(leadPath, 404, { headers: auth(second) });
+    await request(leadPath + "/export", 404, { headers: auth(second) });
+    const data = await waitForLead(leadPath, demo);
+    assert.equal(data.lead.status, "QUALIFIED");
+    assert.equal(data.qualification.model_used, "gemini-test");
+    assert.equal(data.qualification.score, 87);
+    const report = await request(leadPath + "/export", 200, { headers: auth(demo) });
+    assert.match(report.headers.get("content-type") ?? "", /text\/html/);
+    const html = await report.text();
+    assert.ok(!html.includes(injectedMarker));
+    assert.match(html, /&lt;script&gt;SPRINT01&lt;\/script&gt;/);
+    const json = await (await request(leadPath + "/export?format=json", 200, { headers: auth(demo) })).json();
+    assert.equal(json.qualification.summary, injectedMarker);
+    const { data: summary } = await (await request(analytics, 200, { headers: auth(demo) })).json();
+    assert.equal(summary.metrics.total_leads, 1);
+    assert.deepEqual(summary.recent_leads, []);
+    const { data: privateLead } = await (await ingest(payload, 201, second)).json();
+    await waitForLead("/api/v1/webhooks/leads/" + privateLead.lead_id, second);
+    const { data: privateSummary } = await (await request(analytics, 200, { headers: auth(second) })).json();
+    assert.equal(privateSummary.recent_leads.length, 1);
+    console.log("OK ingest, query, tenant isolation, HTML escaping, JSON and analytics (Gemini simulated)");
 
-    const responseData = (await response.json()) as any;
-
-    console.log(`\n📬 Resposta HTTP recebida do Webhook [Status ${response.status}]:`);
-    console.log(JSON.stringify(responseData, null, 2));
-
-    if (!response.ok || !responseData.success) {
-      console.error("❌ Falha na ingestão do lead.");
-      if (serverInstance) serverInstance.close();
-      process.exit(1);
+    for (const mode of ["unavailable", "invalid"] as const) {
+      providerMode = mode;
+      const { data: failed } = await (await ingest(payload, 201)).json();
+      const result = await waitForLead("/api/v1/webhooks/leads/" + failed.lead_id, demo);
+      assert.equal(result.lead.status, "ERROR");
+      assert.equal(result.qualification, null);
     }
+    console.log("OK simulated Gemini outage and invalid score");
 
-    const leadId = responseData.data.lead_id;
-    console.log(`\n⏳ 3. Aguardando processamento da Qualificação Cognitiva por IA (Lead ID: ${leadId})...`);
-
-    // Aguarda 1.5s para o worker assíncrono em background concluir a qualificação no banco
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // 4. Consulta no banco Turso os dados atualizados do lead
-    const leadResult = await db.execute({
-      sql: `SELECT id, name, company, email, status, score, updated_at FROM leads WHERE id = ?`,
-      args: [leadId],
-    });
-
-    if (leadResult.rows.length === 0) {
-      console.error("❌ Registro do lead não localizado no banco de dados.");
-      if (serverInstance) serverInstance.close();
-      process.exit(1);
-    }
-
-    const leadRow = leadResult.rows[0];
-    console.log("\n📊 4. Registro do Lead Atualizado no Banco Turso/LibSQL:");
-    console.log(`   - ID: ${leadRow.id}`);
-    console.log(`   - Contato: ${leadRow.name} (${leadRow.email})`);
-    console.log(`   - Empresa: ${leadRow.company}`);
-    console.log(`   - Status Final: ${leadRow.status}`);
-    console.log(`   - Score de Propensão: ${leadRow.score} / 100`);
-
-    // 5. Consulta os detalhes da qualificação na tabela 'qualifications'
-    const qualResult = await db.execute({
-      sql: `SELECT * FROM qualifications WHERE lead_id = ?`,
-      args: [leadId],
-    });
-
-    if (qualResult.rows.length === 0) {
-      console.error("⚠️ Qualificação ainda não finalizada ou pendente.");
-      if (serverInstance) serverInstance.close();
-      process.exit(1);
-    }
-
-    const qualRow = qualResult.rows[0];
-    console.log("\n🧠 5. Relatório Cognitivo Gerado pela IA:");
-    console.log(`   - Modelo Utilizado: ${qualRow.model_used}`);
-    console.log(`   - Fit Comercial: ${qualRow.fit_level}`);
-    console.log(`   - Urgência Detectada: ${qualRow.urgency_detected}`);
-    console.log(`   - Orçamento Detectado: ${qualRow.budget_detected}`);
-    console.log(`   - Resumo Executivo: ${qualRow.summary}`);
-    console.log(`   - Racional da Nota: ${qualRow.reasoning}`);
-    console.log(`   - Próximo Passo Recomendado: ${qualRow.recommended_next_step}`);
-
-    console.log("\n==================================================================");
-    console.log("✅ [LeadPulse AI] TESTES E VALIDAÇÃO DE ASSETS CONCLUÍDOS COM 100% DE SUCESSO!");
-    console.log("==================================================================");
-
-    if (serverInstance) {
-      serverInstance.close();
-    }
-    process.exit(0);
-  } catch (error) {
-    console.error("💥 Erro ao executar teste end-to-end:", error);
-    if (serverInstance) serverInstance.close();
-    process.exit(1);
+    db.close();
+    const failedHealth = await (await request("/health", 503)).json();
+    assert.equal(failedHealth.database, "DOWN");
+    await request(analytics, 500, { headers: auth(demo) });
+    console.log("OK simulated database outage: health 503, protected request 500");
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    db.close();
+    globalThis.fetch = originalFetch;
   }
 }
 
-runEndToEndTest();
+run().catch((error) => {
+  console.error(error instanceof Error ? error.message : "Test failed");
+  process.exitCode = 1;
+});

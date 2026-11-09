@@ -1,3 +1,4 @@
+import { env } from "../config/env.js";
 import { db } from "../config/database.js";
 import type { Tenant } from "../types/index.js";
 
@@ -90,7 +91,8 @@ export class AnalyticsService {
     }
 
     // 3. Leads recentes
-    const recentRes = await db.execute({
+    const publicDemo = env.NODE_ENV === "production" && tenant.id === "tenant_demo_01";
+    const recentRes = publicDemo ? { rows: [] } : await db.execute({
       sql: `
         SELECT id, name, email, company, status, score, created_at
         FROM leads

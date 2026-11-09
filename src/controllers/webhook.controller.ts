@@ -1,6 +1,14 @@
 import type { Response, NextFunction } from "express";
 import { webhookService } from "../services/webhook.service.js";
 import { UnauthorizedError } from "../utils/errors.js";
+
+function escapeHtml(value: string): string {
+  return value.replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 import type { AuthenticatedRequest } from "../types/index.js";
 
 export class WebhookController {
@@ -124,7 +132,7 @@ export class WebhookController {
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Relatório Executivo LeadPulse AI — ${lead.name || lead.company || id}</title>
+  <title>Relatório Executivo LeadPulse AI — ${escapeHtml(lead.name || lead.company || id)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F172A; color: #F8FAFC; padding: 40px; margin: 0; line-height: 1.6; }
     .container { max-width: 760px; margin: 0 auto; background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 36px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -150,38 +158,38 @@ export class WebhookController {
   <div class="container">
     <div class="header">
       <div class="brand">⚡ LeadPulse AI — Relatório Cognitivo</div>
-      <div class="badge ${badgeClass}">Status: ${lead.status}</div>
+      <div class="badge ${badgeClass}">Status: ${escapeHtml(lead.status)}</div>
     </div>
 
     <div class="score-box">
       <div class="score-num">${qual ? qual.score : 0}<span style="font-size: 18px; color: #94A3B8;">/100</span></div>
       <div>
-        <div style="font-size: 20px; font-weight: 700;">${lead.name || "Contato Comercial"}</div>
-        <div style="color: #94A3B8; font-size: 14px;">${lead.company || "Empresa sob consulta"} • ${lead.role || "Cargo não especificado"}</div>
-        <div style="margin-top: 6px; font-size: 13px; font-weight: 700; color: #34D399;">FIT: ${qual ? qual.fit_level : "UNQUALIFIED"}</div>
+        <div style="font-size: 20px; font-weight: 700;">${escapeHtml(lead.name || "Contato Comercial")}</div>
+        <div style="color: #94A3B8; font-size: 14px;">${escapeHtml(lead.company || "Empresa sob consulta")} • ${escapeHtml(lead.role || "Cargo não especificado")}</div>
+        <div style="margin-top: 6px; font-size: 13px; font-weight: 700; color: #34D399;">FIT: ${escapeHtml(qual ? qual.fit_level : "UNQUALIFIED")}</div>
       </div>
     </div>
 
     <div class="grid">
-      <div class="info-card"><div class="label">E-mail</div><div class="val">${lead.email || "Não informado"}</div></div>
-      <div class="info-card"><div class="label">Telefone</div><div class="val">${lead.phone || "Não informado"}</div></div>
-      <div class="info-card"><div class="label">Urgência Detectada</div><div class="val">${qual ? qual.urgency_detected : "UNKNOWN"}</div></div>
-      <div class="info-card"><div class="label">Orçamento Estimado</div><div class="val">${qual ? qual.budget_detected : "UNKNOWN"}</div></div>
+      <div class="info-card"><div class="label">E-mail</div><div class="val">${escapeHtml(lead.email || "Não informado")}</div></div>
+      <div class="info-card"><div class="label">Telefone</div><div class="val">${escapeHtml(lead.phone || "Não informado")}</div></div>
+      <div class="info-card"><div class="label">Urgência Detectada</div><div class="val">${escapeHtml(qual ? qual.urgency_detected : "UNKNOWN")}</div></div>
+      <div class="info-card"><div class="label">Orçamento Estimado</div><div class="val">${escapeHtml(qual ? qual.budget_detected : "UNKNOWN")}</div></div>
     </div>
 
     <div class="section-title">📋 Resumo Executivo para Vendas</div>
-    <div class="block">${qual ? qual.summary : "Sem resumo disponível."}</div>
+    <div class="block">${escapeHtml(qual ? qual.summary : "Sem resumo disponível.")}</div>
 
     <div class="section-title">🔍 Racional da Pontuação</div>
-    <div class="block" style="color: #CBD5E1;">${qual ? qual.reasoning : "Sem justificativa."}</div>
+    <div class="block" style="color: #CBD5E1;">${escapeHtml(qual ? qual.reasoning : "Sem justificativa.")}</div>
 
     <div class="section-title">🎯 Ação Recomendada para o Closer</div>
     <div class="block" style="border-color: #10B981; background: rgba(16, 185, 129, 0.08); font-weight: 600;">
-      ${qual ? qual.recommended_next_step : "Realizar triagem manual."}
+      ${escapeHtml(qual ? qual.recommended_next_step : "Realizar triagem manual.")}
     </div>
 
     <div class="footer">
-      Gerado automaticamente pelo LeadPulse AI em ${new Date().toLocaleString("pt-BR")} • Tenant: ${tenant.name} (${tenant.id})
+      Gerado automaticamente pelo LeadPulse AI em ${new Date().toLocaleString("pt-BR")} • Tenant: ${escapeHtml(tenant.name)} (${escapeHtml(tenant.id)})
     </div>
   </div>
 </body>

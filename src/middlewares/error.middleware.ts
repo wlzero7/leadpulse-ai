@@ -26,8 +26,24 @@ export function errorHandler(
     return;
   }
 
-  // Falha não tratada (Internal Server Error)
-  console.error("💥 [Unhandled Error]:", err);
+  const parserError = err as Error & { type?: string };
+  const parseFailed = parserError.type === "entity.parse.failed";
+  const tooLarge = parserError.type === "entity.too.large";
+  if (parseFailed || tooLarge) {
+    const statusCode = parseFailed ? 400 : 413;
+    res.status(statusCode).json({
+      success: false,
+      error: {
+        name: parseFailed ? "BadRequestError" : "PayloadTooLargeError",
+        message: parseFailed ? "Corpo da requisição inválido." : "Corpo da requisição excede o limite permitido.",
+        statusCode,
+        timestamp,
+      },
+    });
+    return;
+  }
+
+  console.error("[HTTP] Falha interna ao processar a requisição.");
 
   res.status(500).json({
     success: false,

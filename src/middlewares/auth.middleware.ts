@@ -10,7 +10,7 @@ import type { AuthenticatedRequest } from "../types/index.js";
  */
 export async function tenantAuthMiddleware(
   req: AuthenticatedRequest,
-  _res: Response,
+  res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -43,6 +43,7 @@ export async function tenantAuthMiddleware(
 
     // Injeta o tenant autenticado no ciclo da requisição
     req.tenant = tenant;
+    res.setHeader("Cache-Control", "private, no-store");
     next();
   } catch (error) {
     next(error);

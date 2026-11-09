@@ -1,6 +1,6 @@
 /**
  * LeadPulse AI — Interactive Sandbox Client & Analytics Integration
- * Comunicação direta com a API REST Express + Turso DB + Gemini 2.5 Flash
+ * Comunicação direta com a API REST Express + Turso DB + Gemini 3.1 Flash-Lite
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -18,6 +18,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Chave pública do Tenant de Demonstração (LeadPulse Demo Account)
   const DEMO_API_KEY = "lp_live_sample_key_1234567890abcdef";
+
+  for (const [link, format] of [[btnExportHtml, "html"], [btnExportJson, "json"]]) {
+    link?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      try {
+        const response = await fetch(link.href, { headers: { "X-API-Key": DEMO_API_KEY } });
+        if (!response.ok) throw new Error("Exportação indisponível.");
+        const url = URL.createObjectURL(await response.blob());
+        const download = document.createElement("a");
+        download.href = url;
+        download.download = `leadpulse-report.${format}`;
+        download.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch {
+        alert("Não foi possível exportar o relatório.");
+      }
+    });
+  }
 
   // Presets para testes rápidos
   const presets = {
@@ -153,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // 3. Polling reativo em tempo real para aguardar a IA
       let attempts = 0;
-      const maxAttempts = 20; // até 10s
+      const maxAttempts = 60; // até 30s, além da latência das consultas
       let qualificationData = null;
 
       while (attempts < maxAttempts) {
@@ -170,6 +188,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const checkJson = await checkRes.json();
           const lead = checkJson.data?.lead;
           const qual = checkJson.data?.qualification;
+          if (lead?.status === "ERROR") {
+            throw new Error("A qualificação falhou. Tente novamente mais tarde.");
+          }
 
           if (lead?.status === "QUALIFIED" || lead?.status === "DISQUALIFIED") {
             qualificationData = {
@@ -189,9 +210,11 @@ document.addEventListener("DOMContentLoaded", () => {
       renderReport(qualificationData.lead, qualificationData.qualification);
       fetchLiveMetrics();
     } catch (error) {
-      console.error("Erro na qualificação:", error);
       alert(`Erro ao analisar lead: ${error.message}`);
       setLoadingState(false);
+      loadingState.classList.add("hidden");
+      statusTag.textContent = "Falha na qualificação";
+      statusTag.className = "status-tag";
       emptyState.classList.remove("hidden");
     }
   });

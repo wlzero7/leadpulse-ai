@@ -1,32 +1,33 @@
 import crypto from "node:crypto";
-import { GoogleGenAI, Type } from "@google/genai";
+import { ApiError, GoogleGenAI, Type } from "@google/genai";
+import { z } from "zod";
 import { env } from "../config/env.js";
 import { qualificationRepository } from "../repositories/qualification.repository.js";
 import { leadRepository } from "../repositories/lead.repository.js";
 import type { Lead, Tenant, Qualification } from "../types/index.js";
 
-export interface AIQualificationOutput {
-  score: number;
-  fit_level: "HIGH" | "MEDIUM" | "LOW" | "UNQUALIFIED";
-  summary: string;
-  reasoning: string;
-  budget_detected: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
-  urgency_detected: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
-  recommended_next_step: string;
-  notifications_dispatched?: {
-    slack?: boolean;
-    whatsapp?: boolean;
-    crm?: boolean;
-  };
-}
+const qualificationSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  fit_level: z.enum(["HIGH", "MEDIUM", "LOW", "UNQUALIFIED"]),
+  summary: z.string(),
+  reasoning: z.string(),
+  budget_detected: z.enum(["HIGH", "MEDIUM", "LOW", "UNKNOWN"]),
+  urgency_detected: z.enum(["HIGH", "MEDIUM", "LOW", "UNKNOWN"]),
+  recommended_next_step: z.string(),
+});
+
+export type AIQualificationOutput = z.infer<typeof qualificationSchema>;
 
 export class AIService {
   private client: GoogleGenAI | null = null;
-  private readonly modelName = "gemini-2.5-flash";
+  private readonly modelName = env.GEMINI_MODEL;
 
   constructor() {
     if (env.GEMINI_API_KEY && env.GEMINI_API_KEY !== "mock_or_env") {
-      this.client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+      this.client = new GoogleGenAI({
+        apiKey: env.GEMINI_API_KEY,
+        httpOptions: { timeout: 22_000, retryOptions: { attempts: 1 } },
+      });
     }
   }
 
@@ -34,14 +35,14 @@ export class AIService {
    * Qualifica cognitivamente um lead usando a API do Google Gemini
    */
   async qualifyLead(tenant: Tenant, lead: Lead): Promise<Qualification> {
-    console.log(`🤖 [AI Service] Iniciando qualificação cognitiva para o Lead [${lead.id}] (${lead.company || lead.name || "Sem nome"})...`);
+    console.log(`[AI] Iniciando qualificação do lead [${lead.id}].`);
 
     let qualificationData: AIQualificationOutput;
     let modelUsed = this.modelName;
     let rawApiResponse = "";
 
     try {
-      if (this.client && env.GEMINI_API_KEY && env.GEMINI_API_KEY !== "mock_or_env") {
+      if (this.client) {
         const result = await this.analyzeWithGemini(tenant, lead);
         qualificationData = result.data;
         rawApiResponse = result.rawResponse;
@@ -55,19 +56,6 @@ export class AIService {
           evaluated_at: new Date().toISOString(),
           output: qualificationData,
         });
-      }
-
-      // Simulação de Alertas Multicanal para Leads Quentes (Score >= 80)
-      if (qualificationData.score >= 80) {
-        qualificationData.notifications_dispatched = {
-          slack: true,
-          whatsapp: true,
-          crm: true,
-        };
-        console.log(`🔥 [Channel Alert] LEAD QUENTE DETECTADO (Score ${qualificationData.score}/100)! Disparando alertas automáticos:`);
-        console.log(`   📢 [Slack] Notificação enviada para o canal #leads-hot: ${lead.company || lead.name} (${qualificationData.fit_level})`);
-        console.log(`   💬 [WhatsApp] Alerta push para o time de Closers: Agendar call com ${lead.name} (${lead.phone || lead.email})`);
-        console.log(`   💼 [CRM] Oportunidade Deal criada em 'Prioridade Máxima' no CRM.`);
       }
 
       // 1. Grava o resultado na tabela de qualificações
@@ -95,14 +83,15 @@ export class AIService {
 
       return savedQualification;
     } catch (error) {
-      console.error(`❌ [AI Service] Falha na qualificação do Lead [${lead.id}]:`, error);
+      const cause = error instanceof ApiError ? `Gemini HTTP ${error.status}` : "falha interna ou de comunicação";
+      console.error(`[AI] Falha na qualificação do lead [${lead.id}] (${cause}).`);
       await leadRepository.updateStatusAndScore(lead.id, tenant.id, "ERROR", null);
       throw error;
     }
   }
 
   /**
-   * Chamada oficial estruturada ao modelo Google Gemini 2.5 Flash
+   * Chamada oficial estruturada ao modelo Google Gemini 3.1 Flash-Lite
    */
   private async analyzeWithGemini(
     tenant: Tenant,
@@ -197,7 +186,7 @@ ${lead.raw_payload}
     });
 
     const responseText = response.text || "{}";
-    const parsedData = JSON.parse(responseText) as AIQualificationOutput;
+    const parsedData = qualificationSchema.parse(JSON.parse(responseText));
 
     return {
       data: parsedData,

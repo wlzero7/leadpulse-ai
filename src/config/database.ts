@@ -15,13 +15,6 @@ export const db: Client = createClient({
  * Utilitário de checagem de saúde e conectividade do banco de dados.
  */
 export async function testDbConnection(): Promise<void> {
-  try {
-    const result = await db.execute("SELECT 1 AS alive");
-    if (result.rows.length > 0) {
-      console.log(`🔌 [Database] Conexão com Turso DB estabelecida com sucesso. (${env.TURSO_DATABASE_URL})`);
-    }
-  } catch (error) {
-    console.error("❌ [Database] Falha ao conectar ao banco de dados Turso:", error);
-    throw error;
-  }
+  await db.execute("SELECT 1 AS alive");
+  console.log("[Database] Conexão estabelecida com sucesso.");
 }

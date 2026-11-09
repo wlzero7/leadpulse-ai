@@ -15,7 +15,7 @@ async function runMigration() {
 
     // Verifica se já existe ao menos 1 tenant de demonstração/teste
     const existing = await db.execute({
-      sql: "SELECT id, name, api_key FROM tenants LIMIT 1",
+      sql: "SELECT id FROM tenants LIMIT 1",
       args: [],
     });
 
@@ -36,18 +36,15 @@ async function runMigration() {
         ],
       });
 
-      console.log("🌱 Tenant de demonstração criado:");
-      console.log(`   Tenant ID: ${demoTenantId}`);
-      console.log(`   API Key:   ${demoApiKey}`);
-      console.log("   (Utilize esta API Key no cabeçalho 'X-API-Key' para testar o webhook)");
+      console.log("Tenant de demonstração criado.");
     } else {
       console.log(`ℹ️  Tenants existentes encontrados no banco (${existing.rows.length}).`);
     }
 
     console.log("🎉 Migração concluída com êxito!");
     process.exit(0);
-  } catch (error) {
-    console.error("❌ Falha crítica ao executar migração:", error);
+  } catch {
+    console.error("Falha crítica ao executar migração.");
     process.exit(1);
   }
 }
