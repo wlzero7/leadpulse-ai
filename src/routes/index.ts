@@ -10,12 +10,12 @@ router.get("/health", async (_req, res) => {
   let dbStatus = "UP";
   try {
     await db.execute("SELECT 1");
-  } catch (err) {
+  } catch {
     dbStatus = "DOWN";
   }
 
-  res.status(200).json({
-    status: "ok",
+  res.status(dbStatus === "UP" ? 200 : 503).json({
+    status: dbStatus === "UP" ? "ok" : "error",
     service: "LeadPulse AI Backend",
     version: "1.0.0",
     database: dbStatus,

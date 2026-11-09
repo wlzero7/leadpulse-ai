@@ -1,9 +1,11 @@
+# Deploy alignment: 2026-11-09T19:02:51-03:00
 services:
   - type: web
     name: leadpulse-ai-backend
     runtime: docker
     plan: free
     region: oregon
+    branch: main
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health
