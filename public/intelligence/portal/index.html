@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Portal | LeadPulse Intelligence</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/intelligence/style.css">
+  <link rel="stylesheet" href="/intelligence/portal.css">
+  <script src="/intelligence/portal.js" defer></script>
+</head>
+<body class="portal">
+  <a class="skip" href="#main">Ir para o conteúdo</a>
+  <aside class="sidebar" aria-label="Portal">
+    <a class="brand" href="/intelligence/portal/"><span class="brand-icon">LP</span><span>LeadPulse <strong>Intelligence</strong></span></a>
+    <div class="agency" id="identity" hidden></div>
+    <nav aria-label="Workspace">
+      <span class="nav-caption">ACESSO PRIVADO</span>
+      <button class="nav-button" id="workspaces" type="button" hidden>Meus workspaces</button>
+      <a href="/intelligence/">Demonstração Atlas Mídia</a>
+      <button class="nav-button" id="logout" type="button" hidden>Sair</button>
+    </nav>
+    <div class="sidebar-footer">Portal de agências e empresas</div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <header class="topbar"><div class="breadcrumb"><strong>LeadPulse Intelligence</strong> <span>/</span> Portal</div><span class="badge demo-badge"><i class="dot"></i> Acesso privado</span></header>
+    <div class="content">
+      <p id="status" class="load-state" role="status" hidden></p>
+      <p id="error" class="load-error" role="alert" hidden></p>
+      <div id="screen"></div>
+    </div>
+    <noscript><p>Ative o JavaScript para acessar o portal.</p></noscript>
+  </main>
+</body>
+</html>

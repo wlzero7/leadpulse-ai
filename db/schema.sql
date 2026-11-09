@@ -107,3 +107,59 @@ CREATE TABLE IF NOT EXISTS intelligence_demo_leads (
 );
 
 CREATE INDEX IF NOT EXISTS idx_intelligence_demo_session ON intelligence_demo_leads(session_key, created_at DESC);
+
+-- Authenticated workspaces. Legacy API tenants and the public demo stay separate.
+CREATE TABLE IF NOT EXISTS portal_accounts (
+    id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+    password_hash TEXT NOT NULL, recovery_hash TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS portal_agencies (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS portal_agency_members (
+    agency_id TEXT NOT NULL REFERENCES portal_agencies(id),
+    account_id TEXT NOT NULL REFERENCES portal_accounts(id),
+    role TEXT NOT NULL CHECK(role IN ('OWNER', 'ADMIN')),
+    PRIMARY KEY (agency_id, account_id)
+);
+CREATE TABLE IF NOT EXISTS portal_clients (
+    id TEXT PRIMARY KEY, agency_id TEXT NOT NULL REFERENCES portal_agencies(id),
+    name TEXT NOT NULL, segment TEXT NOT NULL DEFAULT '',
+    UNIQUE (agency_id, id)
+);
+CREATE TABLE IF NOT EXISTS portal_client_members (
+    agency_id TEXT NOT NULL, client_id TEXT NOT NULL,
+    account_id TEXT NOT NULL REFERENCES portal_accounts(id),
+    role TEXT NOT NULL CHECK(role IN ('EDITOR', 'VIEWER')),
+    PRIMARY KEY (agency_id, client_id, account_id),
+    FOREIGN KEY (agency_id, client_id) REFERENCES portal_clients(agency_id, id)
+);
+CREATE TABLE IF NOT EXISTS portal_sessions (
+    token_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES portal_accounts(id), expires_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS portal_invites (
+    token_hash TEXT PRIMARY KEY, agency_id TEXT NOT NULL REFERENCES portal_agencies(id), client_id TEXT,
+    email TEXT NOT NULL, role TEXT NOT NULL, expires_at INTEGER NOT NULL,
+    CHECK ((client_id IS NULL AND role = 'ADMIN') OR (client_id IS NOT NULL AND role IN ('EDITOR', 'VIEWER'))),
+    FOREIGN KEY (agency_id, client_id) REFERENCES portal_clients(agency_id, id)
+);
+CREATE TABLE IF NOT EXISTS portal_resets (
+    token_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES portal_accounts(id),
+    recovery_hash TEXT NOT NULL, expires_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS portal_opportunities (
+    id TEXT PRIMARY KEY, agency_id TEXT NOT NULL, client_id TEXT NOT NULL,
+    name TEXT NOT NULL, company TEXT NOT NULL, analysis TEXT NOT NULL,
+    stage TEXT NOT NULL DEFAULT 'NEW' CHECK(stage IN ('NEW', 'CONTACTED', 'PROPOSAL', 'WON', 'LOST')),
+    outcome TEXT NOT NULL DEFAULT '', created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (agency_id, client_id) REFERENCES portal_clients(agency_id, id)
+);
+CREATE TABLE IF NOT EXISTS portal_rate_limits (
+    scope TEXT PRIMARY KEY, hits INTEGER NOT NULL, expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_portal_agency_account ON portal_agency_members(account_id, agency_id);
+CREATE INDEX IF NOT EXISTS idx_portal_client_account ON portal_client_members(account_id, agency_id, client_id);
+CREATE INDEX IF NOT EXISTS idx_portal_session_account ON portal_sessions(account_id);
+CREATE INDEX IF NOT EXISTS idx_portal_reset_account ON portal_resets(account_id);
+CREATE INDEX IF NOT EXISTS idx_portal_opportunity_client ON portal_opportunities(agency_id, client_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_demo_retention ON intelligence_demo_leads(created_at);

@@ -2,6 +2,8 @@ import { Router } from "express";
 import { webhookRoutes } from "./webhook.routes.js";
 import { analyticsRoutes } from "./analytics.routes.js";
 import { intelligenceRoutes } from "./intelligence.routes.js";
+import { portalAuth } from "./portal-auth.routes.js";
+import { portalRoutes } from "./portal.routes.js";
 import { db } from "../config/database.js";
 
 const router: Router = Router();
@@ -48,5 +50,8 @@ router.get("/api/v1/brand", (_req, res) => {
 router.use("/api/v1/webhooks", webhookRoutes);
 router.use("/api/v1/analytics", analyticsRoutes);
 router.use("/api/v1/intelligence/demo", intelligenceRoutes);
+
+router.use("/api/v1/portal/auth", portalAuth);
+router.use("/api/v1/portal", portalRoutes);
 
 export const appRoutes: Router = router;

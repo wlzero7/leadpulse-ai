@@ -1,0 +1,38 @@
+.portal .brand-icon { font-size: 14px; letter-spacing: -.05em; }
+.nav-button { min-height: 43px; background: none; color: inherit; border: 0; border-radius: 8px; font-weight: 650; text-align: left; padding: 8px 10px; }
+.nav-button:hover { background: #1d2b43; color: white; }
+.portal #identity { min-width: 0; overflow-wrap: anywhere; }
+.portal #status, .portal #error { margin-bottom: 14px; }
+.access-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 430px); gap: 20px; align-items: start; }
+.access-layout .hero { display: block; margin: 0; padding: 32px; min-height: 220px; }
+.actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.portal .actions { margin-top: 12px; }
+.portal .panel > form { margin-top: 12px; }
+.portal .panel + .panel.stack { margin-top: 14px; }
+.portal .panel .button { white-space: normal; text-align: center; }
+.portal .workspace-list { display: grid; gap: 10px; margin-top: 12px; }
+.workspace-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: white; border: 1px solid var(--line); border-radius: 9px; padding: 12px; overflow-wrap: anywhere; }
+.workspace-card strong { display: block; }
+.portal .identity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.portal .field { display: grid; gap: 4px; min-width: 0; }
+.portal .field input, .portal .field select, .portal .field textarea { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px; color: var(--navy); background: white; }
+.portal .field input[readonly] { background: #f1f5f9; }
+.portal .board { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.portal .pipeline-card { overflow-wrap: anywhere; }
+.portal .pipeline-card form { margin-top: 7px; }
+.portal .pipeline-card label { font-size: 12px; }
+.portal .pipeline-card textarea { min-height: 58px; font-size: 12px; }
+.portal .pipeline-card details { margin: 6px 0; font-size: 12px; }
+.portal .pipeline-card summary { cursor: pointer; color: #1d4ed8; font-weight: 650; }
+.portal .pipeline-card details p { margin: 5px 0; }
+.portal .context { color: var(--muted); }
+@media (max-width: 1120px) { .portal .board { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 790px) {
+  .portal .access-layout, .portal .identity-grid { grid-template-columns: 1fr; }
+  .portal .access-layout .hero { min-height: 0; padding: 18px; }
+  .portal .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 410px) { .portal .board { grid-template-columns: 1fr; } }
+
+.portal section.stack { margin-top: 18px; }
+.portal .panel > details { margin-top: 12px; }

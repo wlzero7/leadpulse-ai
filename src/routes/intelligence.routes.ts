@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../config/database.js";
+import { browserRequests, limitByAddress } from "../middlewares/portal-security.js";
 import { env } from "../config/env.js";
 import { evaluateHeuristically } from "../services/ai.service.js";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../utils/errors.js";
@@ -48,23 +49,13 @@ function publicLead(row: { [column: string]: unknown }) {
 
 export const intelligenceRoutes: Router = Router();
 
-intelligenceRoutes.use((req, res, next) => {
-  res.setHeader("Cache-Control", "private, no-store");
-  const site = req.get("Sec-Fetch-Site");
-  if (site === "cross-site" || site === "same-site") {
-    return next(new ForbiddenError("Acesse a demonstração no próprio site."));
-  }
-  if (req.method !== "GET" && !req.is("application/json")) {
-    return next(new BadRequestError("Envie dados no formato JSON."));
-  }
-  next();
-});
+intelligenceRoutes.use(browserRequests);
 
-intelligenceRoutes.get("/", async (req, res, next) => {
+intelligenceRoutes.get("/", limitByAddress("demo-read", 120, 60), async (req, res, next) => {
   try {
     const key = sessionKey(req, res, true);
     const { rows } = await db.execute({
-      sql: "SELECT id, stage, payload, analysis, created_at FROM intelligence_demo_leads WHERE session_key = ? ORDER BY created_at DESC, rowid DESC",
+      sql: "SELECT id, stage, payload, analysis, created_at FROM intelligence_demo_leads WHERE session_key = ? AND created_at >= datetime('now', '-7 days') ORDER BY created_at DESC, rowid DESC",
       args: [key],
     });
     res.json({ mode: "heuristic-demo", leads: rows.map(publicLead) });
@@ -73,7 +64,7 @@ intelligenceRoutes.get("/", async (req, res, next) => {
   }
 });
 
-intelligenceRoutes.post("/leads", async (req, res, next) => {
+intelligenceRoutes.post("/leads", limitByAddress("demo-create", 60, 3600), async (req, res, next) => {
   try {
     const key = sessionKey(req, res);
     const parsed = leadInput.safeParse(req.body);
@@ -87,7 +78,7 @@ intelligenceRoutes.post("/leads", async (req, res, next) => {
     });
     const { rows } = await db.execute({
       sql: `INSERT INTO intelligence_demo_leads (id, session_key, payload, analysis)
-        SELECT ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM intelligence_demo_leads WHERE session_key = ?) < 24
+        SELECT ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM intelligence_demo_leads WHERE session_key = ? AND created_at >= datetime('now', '-7 days')) < 24
         RETURNING id, stage, payload, analysis, created_at`,
       args: [randomUUID(), key, JSON.stringify(lead), JSON.stringify(analysis), key],
     });
@@ -98,13 +89,13 @@ intelligenceRoutes.post("/leads", async (req, res, next) => {
   }
 });
 
-intelligenceRoutes.patch("/leads/:id/stage", async (req, res, next) => {
+intelligenceRoutes.patch("/leads/:id/stage", limitByAddress("demo-move", 90, 60), async (req, res, next) => {
   try {
     const key = sessionKey(req, res);
     const parsed = stageInput.safeParse(req.body);
     if (!parsed.success) throw new BadRequestError("Selecione uma etapa comercial válida.");
     const result = await db.execute({
-      sql: "UPDATE intelligence_demo_leads SET stage = ? WHERE id = ? AND session_key = ?",
+      sql: "UPDATE intelligence_demo_leads SET stage = ? WHERE id = ? AND session_key = ? AND created_at >= datetime('now', '-7 days')",
       args: [parsed.data.stage, req.params.id, key],
     });
     if (!result.rowsAffected) throw new NotFoundError("Lead de demonstração não encontrado.");

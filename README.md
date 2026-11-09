@@ -1,5 +1,15 @@
 # LeadPulse AI — Full-Stack Platform & Cognitive Lead Qualifier
 
+## Portal privado do LeadPulse Intelligence
+
+Abra `/intelligence/portal/`, selecione **Cadastrar agência** e guarde o código de recuperação exibido uma única vez. O portal usa Argon2id e sessões de 12 horas no servidor. Em **Recuperar acesso**, informe seu e-mail e o código salvo para receber um token de 15 minutos. A troca de senha revoga as sessões anteriores e fornece um novo código. Sem o código salvo, esta versão não recupera a conta por e-mail.
+
+No Overview da agência, cadastre empresas, abra seus pipelines e gere convites. Compartilhe o link de uso único de forma privada. O convite dura 48 horas e uma conta já existente deve entrar com o e-mail indicado no convite. Cliente editor pode mover oportunidades e registrar resultados. Cliente leitor apenas consulta. Titulares podem convidar administradores. Os convites são compartilhados manualmente e o cadastro aberto não verifica a caixa de e-mail.
+
+As novas tabelas `portal_*` são adicionadas sem importar os dados da API por chaves ou da demo. O portal cadastra novas oportunidades com análise heurística. A demonstração Atlas Mídia permanece em `/intelligence/`. Seus registros expiram em sete dias, com limpeza na inicialização e a cada hora enquanto o servidor estiver ativo. Há limites de taxa e de registros por sessão.
+
+Para validar a sprint, execute `pnpm run build`, `pnpm run test:ingest`, `pnpm run test:intelligence` e `pnpm run test:portal`.
+
 ## Demonstração comercial do LeadPulse Intelligence
 
 Após iniciar o servidor, abra [`/intelligence/`](http://localhost:3000/intelligence/). A jornada apresenta a agência fictícia Atlas Mídia e seu cliente fictício Nexo Solar. Em **Lead Intelligence**, use **Preencher exemplo** e **Cadastrar e qualificar**. Em **Smart Pipeline**, use o seletor do cartão para mover a oportunidade. O **Overview** e o **Client Workspace** refletem a alteração.

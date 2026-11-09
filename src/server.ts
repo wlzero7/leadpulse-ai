@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
+import { maintainPortal } from "./middlewares/portal-security.js";
 import { db, testDbConnection } from "./config/database.js";
 
 /**
@@ -11,9 +12,13 @@ async function ensureDatabaseReady(): Promise<void> {
   await testDbConnection();
 
   const tableCheck = await db.execute(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('tenants', 'leads', 'qualifications', 'intelligence_demo_leads')"
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (
+      'tenants', 'leads', 'qualifications', 'intelligence_demo_leads',
+      'portal_accounts', 'portal_agencies', 'portal_agency_members', 'portal_clients', 'portal_client_members',
+      'portal_sessions', 'portal_invites', 'portal_resets', 'portal_opportunities', 'portal_rate_limits'
+    )`
   );
-  if (tableCheck.rows.length !== 4) {
+  if (tableCheck.rows.length !== 14) {
     const schemaPath = path.resolve(process.cwd(), "db", "schema.sql");
     await db.executeMultiple(fs.readFileSync(schemaPath, "utf-8"));
     console.log("[Database] Schema SQL aplicado com sucesso.");
@@ -31,6 +36,7 @@ async function bootstrap() {
   try {
     // 1. Garante que o banco e tabelas estejam prontos
     await ensureDatabaseReady();
+    maintainPortal();
 
     // 2. Inicializa o aplicativo Express
     const app = createApp();

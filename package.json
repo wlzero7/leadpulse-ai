@@ -11,7 +11,8 @@
     "start": "node dist/server.js",
     "db:migrate": "tsx db/migrate.ts",
     "test:ingest": "tsx test-ingest.ts",
-    "test:intelligence": "tsx test-intelligence.ts"
+    "test:intelligence": "tsx test-intelligence.ts",
+    "test:portal": "tsx test-portal.ts"
   },
   "keywords": [
     "lead-qualification",
