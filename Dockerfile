@@ -23,7 +23,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=10000
+ENV PORT=3000
 
 # Execução segura sob usuário não-root
 RUN addgroup --system --gid 1001 nodejs && \
@@ -38,6 +38,6 @@ COPY --from=builder --chown=leadpulse:nodejs /app/package.json ./package.json
 
 USER leadpulse
 
-EXPOSE 10000
+EXPOSE 3000
 
 CMD ["node", "dist/server.js"]

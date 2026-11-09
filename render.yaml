@@ -12,7 +12,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: "3000"
       - key: CORS_ORIGIN
         value: "*"
       - key: TURSO_DATABASE_URL
